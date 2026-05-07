@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Raporlar{% endblock %}
+{% block page_title %}Raporlama{% endblock %}
+
+{% block content %}
+<!-- Tarih Filtresi -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('rapor.index') }}" class="filter-form">
+        <div class="filter-group">
+            <label>Başlangıç</label>
+            <input type="date" name="baslangic" value="{{ baslangic }}" class="form-control">
+        </div>
+        <div class="filter-group">
+            <label>Bitiş</label>
+            <input type="date" name="bitis" value="{{ bitis }}" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrele</button>
+        <a href="{{ url_for('rapor.csv_export', baslangic=baslangic, bitis=bitis) }}" class="btn btn-secondary">📥 CSV İndir</a>
+    </form>
+</div>
+
+<!-- Tüketim Özeti -->
+<div class="section-header">
+    <h2>Hammadde Tüketim Özeti</h2>
+    <span class="section-meta">{{ partiler|length }} parti — {{ toplam_tuketim|sayi }} kg toplam</span>
+</div>
+<div class="tuketim-grid">
+    {% for hammadde, miktar in tuketim.items() %}
+    {% if miktar > 0 %}
+    <div class="tuketim-card">
+        <span class="tuketim-label">{{ hammadde }}</span>
+        <span class="tuketim-value">{{ miktar|sayi }} kg</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- Parti Geçmişi -->
+<div class="section-header">
+    <h2>Parti Geçmişi</h2>
+</div>
+<div class="table-card">
+    {% if partiler %}
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Parti No</th>
+                    <th>Tarih</th>
+                    <th>Saat</th>
+                    <th>Formül</th>
+                    <th>PVC</th>
+                    <th>DOTP</th>
+                    <th>DOA</th>
+                    <th>ESBO</th>
+                    <th>Antifog</th>
+                    <th>Stab.</th>
+                    <th>Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in partiler %}
+                <tr>
+                    <td><span class="badge badge-blue">{{ p.parti_no }}</span></td>
+                    <td>{{ p.tarih|tarih }}</td>
+                    <td>{{ p.saat }}</td>
+                    <td>{{ p.formul_adi }}</td>
+                    {% if p.formul_snapshot %}
+                    <td>{{ p.formul_snapshot.pvc_kg|sayi }}</td>
+                    <td>{{ p.formul_snapshot.dotp_kg|sayi }}</td>
+                    <td>{{ p.formul_snapshot.doa_kg|sayi }}</td>
+                    <td>{{ p.formul_snapshot.esbo_kg|sayi }}</td>
+                    <td>{{ p.formul_snapshot.antifog_kg|sayi }}</td>
+                    <td>{{ p.formul_snapshot.stabilizer_kg|sayi }}</td>
+                    {% else %}
+                    <td colspan="6">-</td>
+                    {% endif %}
+                    <td><strong>{{ p.toplam_hammadde_kg|sayi }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Seçilen tarih aralığında parti kaydı bulunamadı.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Hammadde Giriş Geçmişi -->
+<div class="section-header">
+    <h2>Hammadde Giriş Geçmişi</h2>
+</div>
+<div class="table-card">
+    {% if girisler %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Hammadde</th>
+                <th>Miktar</th>
+                <th>Tedarikçi</th>
+                <th>İrsaliye</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in girisler %}
+            <tr>
+                <td>{{ g.tarih|tarih }}</td>
+                <td><span class="badge badge-{{ g.hammadde_tipi|lower }}">{{ g.hammadde_tipi }}</span></td>
+                <td>{{ g.miktar_kg|sayi }} kg</td>
+                <td>{{ g.tedarikci or '-' }}</td>
+                <td>{{ g.irsaliye_no or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Seçilen tarih aralığında giriş kaydı bulunamadı.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

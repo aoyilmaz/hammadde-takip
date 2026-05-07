@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Formüller{% endblock %}
+{% block page_title %}Formül Yönetimi{% endblock %}
+
+{% block content %}
+<!-- Yeni Formül Butonu -->
+<div class="section-actions">
+    <button class="btn btn-primary" onclick="formulModalAc()">+ Yeni Formül</button>
+</div>
+
+<!-- Formül Kartları -->
+<div class="formul-grid">
+    {% for formul in formuller %}
+    <div class="formul-card {% if formul.varsayilan %}formul-default{% endif %}">
+        {% if formul.varsayilan %}
+        <span class="formul-badge">⭐ Varsayılan</span>
+        {% endif %}
+        <h3 class="formul-name">{{ formul.ad }}</h3>
+        <div class="formul-details">
+            <div class="formul-row"><span>PVC</span><strong>{{ formul.pvc_kg|sayi }} kg</strong></div>
+            <div class="formul-row"><span>DOTP</span><strong>{{ formul.dotp_kg|sayi }} kg</strong></div>
+            <div class="formul-row"><span>DOA</span><strong>{{ formul.doa_kg|sayi }} kg</strong></div>
+            <div class="formul-row"><span>ESBO</span><strong>{{ formul.esbo_kg|sayi }} kg</strong></div>
+            <div class="formul-row"><span>Antifog</span><strong>{{ formul.antifog_kg|sayi }} kg</strong></div>
+            <div class="formul-row"><span>Stabilizer</span><strong>{{ formul.stabilizer_kg|sayi }} kg</strong></div>
+            {% if formul.slip_kg > 0 %}
+            <div class="formul-row"><span>Slip</span><strong>{{ formul.slip_kg|sayi }} kg</strong></div>
+            {% endif %}
+            <div class="formul-divider"></div>
+            {% if formul.pellet_kg > 0 %}
+            <div class="formul-row formul-row-gd"><span>Pellet G.D.</span><strong>{{ formul.pellet_kg|sayi }} kg</strong></div>
+            {% endif %}
+            {% if formul.kirma_sure_sn > 0 %}
+            <div class="formul-row formul-row-gd"><span>Kırma G.D.</span><strong>{{ formul.kirma_sure_sn|sayi }} sn</strong></div>
+            {% endif %}
+            <div class="formul-divider"></div>
+            <div class="formul-row formul-total"><span>Toplam</span><strong>{{ formul.toplam_hammadde_kg|sayi }} kg</strong></div>
+        </div>
+        <div class="formul-meta">
+            <small>Güncelleme: {{ formul.updated_at|tarih_saat }}</small>
+        </div>
+        <div class="formul-actions">
+            <button class="btn btn-sm btn-secondary" onclick="formulDuzenle({{ formul.id }}, '{{ formul.ad }}', {{ formul.pvc_kg }}, {{ formul.dotp_kg }}, {{ formul.doa_kg }}, {{ formul.esbo_kg }}, {{ formul.antifog_kg }}, {{ formul.stabilizer_kg }}, {{ formul.slip_kg }}, {{ formul.pellet_kg }}, {{ formul.kirma_sure_sn }}, {{ 'true' if formul.varsayilan else 'false' }})">✏️ Düzenle</button>
+            <form action="{{ url_for('formul.kopyala', formul_id=formul.id) }}" method="POST" class="inline-form">
+                <button type="submit" class="btn btn-sm btn-secondary">📋 Kopyala</button>
+            </form>
+            <form action="{{ url_for('formul.sil', formul_id=formul.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Bu formülü silmek istediğinize emin misiniz?')">
+                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not formuller %}
+    <div class="empty-state full-width">
+        <span class="empty-icon">📋</span>
+        <p>Henüz formül oluşturulmamış.</p>
+        <button class="btn btn-primary" onclick="formulModalAc()">İlk Formülü Oluştur</button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Formül Modal -->
+<div class="modal-overlay" id="formulModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Yeni Formül</h3>
+            <button class="modal-close" onclick="formulModalKapat()">&times;</button>
+        </div>
+        <form action="{{ url_for('formul.kaydet') }}" method="POST">
+            <input type="hidden" name="formul_id" id="formul_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="ad">Formül Adı</label>
+                    <input type="text" name="ad" id="formul_ad" class="form-control" required placeholder="Örn: Standart Streç">
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>PVC (kg)</label>
+                        <input type="number" name="pvc_kg" id="f_pvc" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>DOTP (kg)</label>
+                        <input type="number" name="dotp_kg" id="f_dotp" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>DOA (kg)</label>
+                        <input type="number" name="doa_kg" id="f_doa" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>ESBO (kg)</label>
+                        <input type="number" name="esbo_kg" id="f_esbo" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Antifog (kg)</label>
+                        <input type="number" name="antifog_kg" id="f_antifog" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Stabilizer (kg)</label>
+                        <input type="number" name="stabilizer_kg" id="f_stabilizer" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Slip (kg) <small class="text-muted">opsiyonel</small></label>
+                        <input type="number" name="slip_kg" id="f_slip" class="form-control" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="form-section-title">Geri Dönüşüm</div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Pellet (kg)</label>
+                        <input type="number" name="pellet_kg" id="f_pellet" class="form-control" step="0.1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Kırma Süresi (sn)</label>
+                        <input type="number" name="kirma_sure_sn" id="f_kirma" class="form-control" step="1" value="0">
+                    </div>
+                </div>
+                <div class="form-group form-check">
+                    <label>
+                        <input type="checkbox" name="varsayilan" id="f_varsayilan">
+                        Varsayılan formül olarak ayarla
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="formulModalKapat()">İptal</button>
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formulModalAc() {
+    document.getElementById('modalTitle').textContent = 'Yeni Formül';
+    document.getElementById('formul_id').value = '';
+    document.getElementById('formul_ad').value = '';
+    document.getElementById('f_pvc').value = 0;
+    document.getElementById('f_dotp').value = 0;
+    document.getElementById('f_doa').value = 0;
+    document.getElementById('f_esbo').value = 0;
+    document.getElementById('f_antifog').value = 0;
+    document.getElementById('f_stabilizer').value = 0;
+    document.getElementById('f_slip').value = 0;
+    document.getElementById('f_pellet').value = 0;
+    document.getElementById('f_kirma').value = 0;
+    document.getElementById('f_varsayilan').checked = false;
+    document.getElementById('formulModal').classList.add('active');
+}
+
+function formulDuzenle(id, ad, pvc, dotp, doa, esbo, antifog, stabilizer, slip, pellet, kirma, varsayilan) {
+    document.getElementById('modalTitle').textContent = 'Formül Düzenle';
+    document.getElementById('formul_id').value = id;
+    document.getElementById('formul_ad').value = ad;
+    document.getElementById('f_pvc').value = pvc;
+    document.getElementById('f_dotp').value = dotp;
+    document.getElementById('f_doa').value = doa;
+    document.getElementById('f_esbo').value = esbo;
+    document.getElementById('f_antifog').value = antifog;
+    document.getElementById('f_stabilizer').value = stabilizer;
+    document.getElementById('f_slip').value = slip;
+    document.getElementById('f_pellet').value = pellet;
+    document.getElementById('f_kirma').value = kirma;
+    document.getElementById('f_varsayilan').checked = varsayilan;
+    document.getElementById('formulModal').classList.add('active');
+}
+
+function formulModalKapat() {
+    document.getElementById('formulModal').classList.remove('active');
+}
+
+// ESC ile kapatma
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') formulModalKapat();
+});
+</script>
+{% endblock %}

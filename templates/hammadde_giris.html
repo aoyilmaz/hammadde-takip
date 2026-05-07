@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Hammadde Giriş{% endblock %}
+{% block page_title %}Hammadde Giriş{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <!-- Sol: Giriş Formu -->
+    <div class="form-card">
+        <h3 class="card-title">Yeni Hammadde Girişi</h3>
+        <form action="{{ url_for('hammadde.ekle') }}" method="POST" id="hammaddeForm">
+            <div class="form-group">
+                <label for="hammadde_tipi">Hammadde Tipi</label>
+                <select name="hammadde_tipi" id="hammadde_tipi" class="form-control" required onchange="hammaddeTipiDegisti()">
+                    <option value="">-- Seçin --</option>
+                    <option value="PVC">PVC (Bigbag)</option>
+                    <option value="DOA">DOA (Tanker)</option>
+                    <option value="DOTP">DOTP (Tanker)</option>
+                    <option value="ESBO">ESBO (Tanker)</option>
+                    <option value="Antifog">Antifog (IBC/Varil)</option>
+                    <option value="Stabilizer">Stabilizer (IBC/Varil)</option>
+                    <option value="Slip">Slip (IBC/Varil)</option>
+                </select>
+            </div>
+
+            <!-- PVC Bigbag alanları -->
+            <div id="pvcFields" style="display:none;">
+                <div class="form-group">
+                    <label for="bigbag_tipi">Bigbag Tipi (kg)</label>
+                    <select name="bigbag_tipi" id="bigbag_tipi" class="form-control">
+                        <option value="750">750 kg</option>
+                        <option value="1000">1.000 kg</option>
+                        <option value="1100">1.100 kg</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bigbag_adet">Adet</label>
+                    <input type="number" name="bigbag_adet" id="bigbag_adet" class="form-control" min="1" value="1" onchange="bigbagHesapla()">
+                </div>
+                <div class="form-group">
+                    <label>Toplam kg</label>
+                    <div class="calculated-value" id="bigbagToplam">750 kg</div>
+                </div>
+            </div>
+
+            <!-- Silo/Tank alanları -->
+            <div id="siloFields" style="display:none;">
+                <div class="form-group">
+                    <label for="silo_id">Silo / Tank</label>
+                    <select name="silo_id" id="silo_id" class="form-control">
+                        {% for silo in silolar %}
+                        <option value="{{ silo.id }}" data-tip="{{ silo.hammadde_tipi }}">{{ silo.ad }} ({{ silo.mevcut_kg|sayi }} / {{ silo.kapasite_kg|sayi }} kg)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="miktar_kg">Miktar (kg)</label>
+                    <input type="number" name="miktar_kg" id="miktar_kg" class="form-control" step="0.1" min="0.1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="tarih">Tarih</label>
+                <input type="date" name="tarih" id="tarih" class="form-control" value="{{ today }}">
+            </div>
+            <div class="form-group">
+                <label for="tedarikci">Tedarikçi</label>
+                <input type="text" name="tedarikci" id="tedarikci" class="form-control" placeholder="Firma adı">
+            </div>
+            <div class="form-group">
+                <label for="irsaliye_no">İrsaliye No</label>
+                <input type="text" name="irsaliye_no" id="irsaliye_no" class="form-control" placeholder="İrsaliye numarası">
+            </div>
+            <div class="form-group">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="2" placeholder="Ek notlar..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Girişi Kaydet</button>
+        </form>
+    </div>
+
+    <!-- Sağ: Giriş Geçmişi -->
+    <div class="table-card">
+        <h3 class="card-title">Son Giriş Kayıtları</h3>
+        {% if girisler %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Hammadde</th>
+                    <th>Miktar</th>
+                    <th>Detay</th>
+                    <th>Tedarikçi</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for giris in girisler %}
+                <tr>
+                    <td>{{ giris.tarih|tarih }}</td>
+                    <td><span class="badge badge-{{ giris.hammadde_tipi|lower }}">{{ giris.hammadde_tipi }}</span></td>
+                    <td>{{ giris.miktar_kg|sayi }} kg</td>
+                    <td>
+                        {% if giris.hammadde_tipi == 'PVC' %}
+                            {{ giris.bigbag_adet }}× {{ giris.bigbag_tipi }} kg
+                        {% elif giris.silo %}
+                            {{ giris.silo.ad }}
+                        {% endif %}
+                    </td>
+                    <td>{{ giris.tedarikci or '-' }}</td>
+                    <td>
+                        <form action="{{ url_for('hammadde.sil', giris_id=giris.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Bu giriş kaydını silmek istediğinize emin misiniz? Stok geri alınacaktır.')">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Sil">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <p>Henüz hammadde girişi bulunmuyor.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function hammaddeTipiDegisti() {
+    const tip = document.getElementById('hammadde_tipi').value;
+    const pvcFields = document.getElementById('pvcFields');
+    const siloFields = document.getElementById('siloFields');
+    const siloSelect = document.getElementById('silo_id');
+
+    if (tip === 'PVC') {
+        pvcFields.style.display = 'block';
+        siloFields.style.display = 'none';
+        bigbagHesapla();
+    } else if (tip) {
+        pvcFields.style.display = 'none';
+        siloFields.style.display = 'block';
+        // Sadece uygun siloları göster
+        Array.from(siloSelect.options).forEach(opt => {
+            if (opt.dataset.tip) {
+                opt.style.display = opt.dataset.tip === tip ? '' : 'none';
+                if (opt.dataset.tip === tip) siloSelect.value = opt.value;
+            }
+        });
+    } else {
+        pvcFields.style.display = 'none';
+        siloFields.style.display = 'none';
+    }
+}
+
+function bigbagHesapla() {
+    const tipi = parseInt(document.getElementById('bigbag_tipi').value) || 750;
+    const adet = parseInt(document.getElementById('bigbag_adet').value) || 0;
+    document.getElementById('bigbagToplam').textContent = (tipi * adet).toLocaleString('tr-TR') + ' kg';
+}
+
+document.getElementById('bigbag_tipi').addEventListener('change', bigbagHesapla);
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hammadde Takip{% endblock %} — PVC Streç Üretim</title>
+    <meta name="description" content="PVC Streç Üretim Hattı Hammadde Takip Sistemi">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Sidebar Navigasyon -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">🏭</span>
+                <div class="logo-text">
+                    <span class="logo-title">Hammadde Takip</span>
+                    <span class="logo-subtitle">PVC Streç Üretim</span>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('hammadde.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('hammadde') %}active{% endif %}">
+                <span class="nav-icon">📥</span>
+                <span class="nav-label">Hammadde Giriş</span>
+            </a>
+            <a href="{{ url_for('formul.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('formul') %}active{% endif %}">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Formüller</span>
+            </a>
+            <a href="{{ url_for('uretim.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('uretim') %}active{% endif %}">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-label">Üretim</span>
+            </a>
+            <a href="{{ url_for('geri_donus.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('geri_donus') %}active{% endif %}">
+                <span class="nav-icon">♻️</span>
+                <span class="nav-label">Geri Dönüşüm</span>
+            </a>
+            <a href="{{ url_for('rapor.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('rapor') %}active{% endif %}">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Raporlar</span>
+            </a>
+            <a href="{{ url_for('ayarlar.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('ayarlar') %}active{% endif %}">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Ayarlar</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="version">v1.0</span>
+        </div>
+    </aside>
+
+    <!-- Ana İçerik -->
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="menu-toggle" onclick="toggleSidebar()" id="menuToggle">☰</button>
+            <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            <div class="header-right">
+                <span class="current-date" id="currentDate"></span>
+            </div>
+        </header>
+
+        <!-- Flash mesajları -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}" onclick="this.remove()">
+                            <span class="flash-icon">
+                                {% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                            </span>
+                            <span>{{ message }}</span>
+                            <button class="flash-close">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="content-area">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

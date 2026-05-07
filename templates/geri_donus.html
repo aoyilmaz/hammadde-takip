@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Geri Dönüşüm{% endblock %}
+{% block page_title %}Geri Dönüşüm Yönetimi{% endblock %}
+
+{% block content %}
+<!-- Tank Durumları -->
+<div class="gd-tanks-row">
+    <div class="silo-card gd-card-large">
+        <div class="silo-visual">
+            <div class="silo-body silo-body-medium">
+                <div class="silo-fill silo-fill-{{ kirma_tank.renk_kodu }}" style="height: {{ kirma_tank.doluluk_yuzdesi }}%">
+                    <span class="silo-percent">%{{ kirma_tank.doluluk_yuzdesi }}</span>
+                </div>
+            </div>
+            <div class="silo-base"></div>
+        </div>
+        <div class="silo-info">
+            <span class="silo-name">♻️ Kırma Tankı</span>
+            <span class="silo-detail">{{ kirma_tank.mevcut_kg|sayi }} / {{ kirma_tank.kapasite_kg|sayi }} kg</span>
+            <small class="silo-meta">B-kalite → Kırma makinesinden</small>
+        </div>
+    </div>
+    <div class="silo-card gd-card-large">
+        <div class="silo-visual">
+            <div class="silo-body silo-body-medium">
+                <div class="silo-fill silo-fill-{{ pellet_tank.renk_kodu }}" style="height: {{ pellet_tank.doluluk_yuzdesi }}%">
+                    <span class="silo-percent">%{{ pellet_tank.doluluk_yuzdesi }}</span>
+                </div>
+            </div>
+            <div class="silo-base"></div>
+        </div>
+        <div class="silo-info">
+            <span class="silo-name">♻️ Pellet Tankı</span>
+            <span class="silo-detail">{{ pellet_tank.mevcut_kg|sayi }} / {{ pellet_tank.kapasite_kg|sayi }} kg</span>
+            <small class="silo-meta">Makine şeritleri → Kepek</small>
+        </div>
+    </div>
+</div>
+
+<div class="two-column">
+    <!-- Sol: Giriş Formu -->
+    <div class="form-card">
+        <h3 class="card-title">Geri Dönüşüm Girişi</h3>
+        <form action="{{ url_for('geri_donus.ekle') }}" method="POST">
+            <div class="form-group">
+                <label for="tank_tipi">Tank</label>
+                <select name="tank_tipi" id="tank_tipi" class="form-control" required>
+                    <option value="kirma">Kırma Tankı (B-kalite)</option>
+                    <option value="pellet">Pellet Tankı (Şerit kepek)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="miktar_kg">Miktar (kg)</label>
+                <input type="number" name="miktar_kg" id="miktar_kg" class="form-control" step="0.1" min="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="tarih">Tarih</label>
+                <input type="date" name="tarih" id="tarih" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="2" placeholder="Ek notlar..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Girişi Kaydet</button>
+        </form>
+    </div>
+
+    <!-- Sağ: Giriş Geçmişi -->
+    <div class="table-card">
+        <h3 class="card-title">Giriş Geçmişi</h3>
+        {% if girisler %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Tank</th>
+                    <th>Miktar</th>
+                    <th>Not</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for giris in girisler %}
+                <tr>
+                    <td>{{ giris.tarih|tarih }}</td>
+                    <td><span class="badge badge-{{ giris.tank_tipi }}">{{ 'Kırma' if giris.tank_tipi == 'kirma' else 'Pellet' }}</span></td>
+                    <td>{{ giris.miktar_kg|sayi }} kg</td>
+                    <td>{{ giris.notlar or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <p>Henüz geri dönüşüm girişi bulunmuyor.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

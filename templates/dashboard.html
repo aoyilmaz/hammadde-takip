@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Günlük Özet Kartları -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">🔄</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ bugun_parti_sayisi }}</span>
+            <span class="stat-label">Bugün Üretilen Parti</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-green">⚖️</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ bugun_toplam_kg|sayi }}</span>
+            <span class="stat-label">Bugün Tüketim (kg)</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">📦</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ pvc_toplam_adet }}</span>
+            <span class="stat-label">PVC Bigbag (Adet)</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-orange">🏗️</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ pvc_toplam_kg|sayi }}</span>
+            <span class="stat-label">PVC Toplam (kg)</span>
+        </div>
+    </div>
+</div>
+
+<!-- Silo ve Tank Seviyeleri -->
+<div class="section-header">
+    <h2>Silo ve Tank Seviyeleri</h2>
+</div>
+<div class="silos-grid">
+    {% for silo in silolar %}
+    <div class="silo-card">
+        <div class="silo-visual">
+            <div class="silo-body">
+                <div class="silo-fill silo-fill-{{ silo.renk_kodu }}" style="height: {{ silo.doluluk_yuzdesi }}%">
+                    <span class="silo-percent">%{{ silo.doluluk_yuzdesi }}</span>
+                </div>
+            </div>
+            <div class="silo-base"></div>
+        </div>
+        <div class="silo-info">
+            <span class="silo-name">{{ silo.ad }}</span>
+            <span class="silo-detail">{{ silo.mevcut_kg|sayi }} / {{ silo.kapasite_kg|sayi }} kg</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- PVC Bigbag Detay -->
+<div class="section-header">
+    <h2>PVC Bigbag Stoku</h2>
+</div>
+<div class="pvc-grid">
+    {% for pvc in pvc_stoklar %}
+    <div class="pvc-card">
+        <div class="pvc-icon">📦</div>
+        <div class="pvc-info">
+            <span class="pvc-type">{{ pvc.bigbag_tipi }} kg</span>
+            <span class="pvc-count">{{ pvc.adet }} Adet</span>
+            <span class="pvc-total">{{ pvc.toplam_kg|sayi }} kg</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Geri Dönüşüm Tankları -->
+<div class="section-header">
+    <h2>Geri Dönüşüm Tankları</h2>
+</div>
+<div class="gd-grid">
+    {% for tank in geri_donus_tanklari %}
+    <div class="silo-card gd-card">
+        <div class="silo-visual">
+            <div class="silo-body silo-body-small">
+                <div class="silo-fill silo-fill-{{ tank.renk_kodu }}" style="height: {{ tank.doluluk_yuzdesi }}%">
+                    <span class="silo-percent">%{{ tank.doluluk_yuzdesi }}</span>
+                </div>
+            </div>
+            <div class="silo-base"></div>
+        </div>
+        <div class="silo-info">
+            <span class="silo-name">{{ tank.ad }}</span>
+            <span class="silo-detail">{{ tank.mevcut_kg|sayi }} / {{ tank.kapasite_kg|sayi }} kg</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Bugünkü Tüketim -->
+{% if bugun_parti_sayisi > 0 %}
+<div class="section-header">
+    <h2>Bugünkü Hammadde Tüketimi</h2>
+</div>
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                {% for hammadde, miktar in bugun_tuketim.items() %}
+                <th>{{ hammadde }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                {% for hammadde, miktar in bugun_tuketim.items() %}
+                <td>{{ miktar|sayi }} kg</td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Son Partiler -->
+<div class="section-header">
+    <h2>Son Üretim Partileri</h2>
+</div>
+<div class="table-card">
+    {% if son_partiler %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Parti No</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Formül</th>
+                <th>Toplam (kg)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for parti in son_partiler %}
+            <tr>
+                <td><span class="badge badge-blue">{{ parti.parti_no }}</span></td>
+                <td>{{ parti.tarih|tarih }}</td>
+                <td>{{ parti.saat }}</td>
+                <td>{{ parti.formul_adi }}</td>
+                <td>{{ parti.toplam_hammadde_kg|sayi }} kg</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Henüz üretim partisi bulunmuyor.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Ayarlar{% endblock %}
+{% block page_title %}Ayarlar{% endblock %}
+
+{% block content %}
+<!-- Sistem Ayarları -->
+<div class="settings-section">
+    <h3 class="card-title">⚙️ Sistem Ayarları</h3>
+    <form action="{{ url_for('ayarlar.kaydet') }}" method="POST" class="form-card">
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label for="kirma_akis_hizi">Kırma Akış Hızı (kg/sn)</label>
+                <input type="number" name="kirma_akis_hizi" id="kirma_akis_hizi" class="form-control"
+                       step="0.01" min="0.01"
+                       value="{{ ayarlar.get('kirma_akis_hizi', {}).deger if ayarlar.get('kirma_akis_hizi') else '0.1' }}">
+                <small class="form-help">Kırma tankından saniye başına akan malzeme miktarı</small>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Ayarları Kaydet</button>
+    </form>
+</div>
+
+<!-- Silo ve Tank Kapasiteleri -->
+<div class="settings-section">
+    <h3 class="card-title">🏗️ Silo/Tank Kapasiteleri ve Mevcut Stok</h3>
+    <form action="{{ url_for('ayarlar.silo_guncelle') }}" method="POST" class="form-card">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Silo / Tank</th>
+                        <th>Hammadde</th>
+                        <th>Kapasite (kg)</th>
+                        <th>Mevcut Stok (kg)</th>
+                        <th>Doluluk</th>
+                        <th>Son Güncelleme</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for silo in silolar %}
+                    <tr>
+                        <td><strong>{{ silo.ad }}</strong></td>
+                        <td><span class="badge badge-{{ silo.hammadde_tipi|lower }}">{{ silo.hammadde_tipi }}</span></td>
+                        <td><input type="number" name="kapasite_{{ silo.id }}" class="form-control form-control-sm" step="1" value="{{ silo.kapasite_kg|int }}"></td>
+                        <td><input type="number" name="mevcut_{{ silo.id }}" class="form-control form-control-sm" step="0.1" value="{{ silo.mevcut_kg }}"></td>
+                        <td>
+                            <div class="mini-bar">
+                                <div class="mini-bar-fill mini-bar-{{ silo.renk_kodu }}" style="width: {{ silo.doluluk_yuzdesi }}%"></div>
+                            </div>
+                            <small>%{{ silo.doluluk_yuzdesi }}</small>
+                        </td>
+                        <td><small>{{ silo.updated_at|tarih_saat }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h4 style="margin-top: 1.5rem; color: var(--text-primary);">PVC Bigbag Stoku</h4>
+        <div class="pvc-settings-grid">
+            {% for pvc in pvc_stoklar %}
+            <div class="form-group">
+                <label>{{ pvc.bigbag_tipi }} kg Bigbag (Adet)</label>
+                <input type="number" name="pvc_adet_{{ pvc.bigbag_tipi }}" class="form-control" min="0" value="{{ pvc.adet }}">
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Stok Bilgilerini Güncelle</button>
+    </form>
+</div>
+
+<!-- Yedekleme / Geri Yükleme -->
+<div class="settings-section">
+    <h3 class="card-title">💾 Veritabanı Yedekleme</h3>
+    <div class="form-card">
+        <div class="backup-actions">
+            <div class="backup-item">
+                <p>Veritabanını .db dosyası olarak indir:</p>
+                <a href="{{ url_for('ayarlar.yedekle') }}" class="btn btn-secondary">📥 Veritabanını İndir</a>
+            </div>
+            <div class="backup-item">
+                <p>Yedek dosyasından geri yükle:</p>
+                <form action="{{ url_for('ayarlar.yukle') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+                    <input type="file" name="db_file" accept=".db" class="form-control" required>
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Mevcut veritabanı üzerine yazılacak. Devam etmek istediğinize emin misiniz?')">📤 Geri Yükle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

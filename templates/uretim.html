@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Üretim{% endblock %}
+{% block page_title %}Üretim — Parti Kayıt{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <!-- Sol: Parti Üretim Formu -->
+    <div class="form-card">
+        <h3 class="card-title">Parti Üret</h3>
+        <form action="{{ url_for('uretim.parti_uret') }}" method="POST" id="uretimForm">
+            <div class="form-group">
+                <label for="formul_id">Formül Seçin</label>
+                <select name="formul_id" id="formul_id" class="form-control" required onchange="formulSecildi()">
+                    <option value="">-- Formül Seçin --</option>
+                    {% for f in formuller %}
+                    <option value="{{ f.id }}" {% if f.varsayilan %}selected{% endif %}>
+                        {{ f.ad }} {% if f.varsayilan %}⭐{% endif %} ({{ f.toplam_hammadde_kg|sayi }} kg)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Formül Detay Önizleme -->
+            <div id="formulDetay" class="formul-preview" style="display:none;">
+                <div class="preview-title">Formül Detayı (1 Parti)</div>
+                <div class="preview-grid" id="previewGrid"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="parti_sayisi">Parti Sayısı</label>
+                <input type="number" name="parti_sayisi" id="parti_sayisi" class="form-control" min="1" max="100" value="1">
+            </div>
+            <div class="form-group">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="2" placeholder="Ek notlar..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" onclick="return confirm('Parti üretimini başlatmak istediğinize emin misiniz?')">
+                🔄 Parti Üret
+            </button>
+        </form>
+    </div>
+
+    <!-- Sağ: Parti Geçmişi -->
+    <div class="table-card">
+        <h3 class="card-title">Parti Geçmişi</h3>
+        {% if partiler %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Parti No</th>
+                    <th>Tarih</th>
+                    <th>Saat</th>
+                    <th>Formül</th>
+                    <th>Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for parti in partiler %}
+                <tr>
+                    <td><span class="badge badge-blue">{{ parti.parti_no }}</span></td>
+                    <td>{{ parti.tarih|tarih }}</td>
+                    <td>{{ parti.saat }}</td>
+                    <td>{{ parti.formul_adi }}</td>
+                    <td>{{ parti.toplam_hammadde_kg|sayi }} kg</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <p>Henüz parti üretimi yapılmamış.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formulSecildi() {
+    const id = document.getElementById('formul_id').value;
+    const detay = document.getElementById('formulDetay');
+    const grid = document.getElementById('previewGrid');
+
+    if (!id) { detay.style.display = 'none'; return; }
+
+    fetch(`/uretim/formul-detay/${id}`)
+        .then(r => r.json())
+        .then(data => {
+            let html = '';
+            const items = [
+                ['PVC', data.pvc_kg], ['DOTP', data.dotp_kg], ['DOA', data.doa_kg],
+                ['ESBO', data.esbo_kg], ['Antifog', data.antifog_kg],
+                ['Stabilizer', data.stabilizer_kg]
+            ];
+            if (data.slip_kg > 0) items.push(['Slip', data.slip_kg]);
+            if (data.pellet_kg > 0) items.push(['Pellet G.D.', data.pellet_kg]);
+            if (data.kirma_sure_sn > 0) items.push(['Kırma G.D.', data.kirma_sure_sn + ' sn']);
+
+            items.forEach(([name, val]) => {
+                if (val > 0) {
+                    const isKg = typeof val === 'number';
+                    html += `<div class="preview-item"><span>${name}</span><strong>${isKg ? val.toLocaleString('tr-TR') + ' kg' : val}</strong></div>`;
+                }
+            });
+            html += `<div class="preview-item preview-total"><span>Toplam</span><strong>${data.toplam_kg.toLocaleString('tr-TR')} kg</strong></div>`;
+            grid.innerHTML = html;
+            detay.style.display = 'block';
+        });
+}
+
+// Sayfa yüklendiğinde varsayılan formül seçiliyse detayları göster
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('formul_id').value) formulSecildi();
+});
+</script>
+{% endblock %}
