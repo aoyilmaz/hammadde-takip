@@ -12,13 +12,9 @@
                 <label for="hammadde_tipi">Hammadde Tipi</label>
                 <select name="hammadde_tipi" id="hammadde_tipi" class="form-control" required onchange="hammaddeTipiDegisti()">
                     <option value="">-- Seçin --</option>
-                    <option value="PVC">PVC (Bigbag)</option>
-                    <option value="DOA">DOA (Tanker)</option>
-                    <option value="DOTP">DOTP (Tanker)</option>
-                    <option value="ESBO">ESBO (Tanker)</option>
-                    <option value="Antifog">Antifog (IBC/Varil)</option>
-                    <option value="Stabilizer">Stabilizer (IBC/Varil)</option>
-                    <option value="Slip">Slip (IBC/Varil)</option>
+                    {% for tip in hammadde_tipleri %}
+                    <option value="{{ tip }}">{{ tip }} {{ '(Bigbag)' if tip == 'PVC' else '' }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
@@ -63,8 +59,13 @@
                 <input type="date" name="tarih" id="tarih" class="form-control" value="{{ today }}">
             </div>
             <div class="form-group">
-                <label for="tedarikci">Tedarikçi</label>
-                <input type="text" name="tedarikci" id="tedarikci" class="form-control" placeholder="Firma adı">
+                <label for="tedarikci_id">Tedarikçi</label>
+                <select name="tedarikci_id" id="tedarikci_id" class="form-control" onchange="tedarikciDegisti()">
+                    <option value="">-- Seçin --</option>
+                </select>
+                <input type="hidden" name="urun_kodu" id="urun_kodu">
+                <small id="urun_kodu_display" style="display: none; color: var(--primary-color); font-weight: 600; margin-top: 5px;"></small>
+                <small style="display: block; margin-top: 5px;"><a href="{{ url_for('tedarikci.index') }}" style="color: var(--primary-color);">Yeni Tedarikçi Ekle</a></small>
             </div>
             <div class="form-group">
                 <label for="irsaliye_no">İrsaliye No</label>
@@ -106,7 +107,12 @@
                             {{ giris.silo.ad }}
                         {% endif %}
                     </td>
-                    <td>{{ giris.tedarikci or '-' }}</td>
+                    <td>
+                        {{ giris.tedarikci_rel.ad if giris.tedarikci_rel else (giris.tedarikci or '-') }}
+                        {% if giris.urun_kodu %}
+                        <br><small class="text-muted">Kod: {{ giris.urun_kodu }}</small>
+                        {% endif %}
+                    </td>
                     <td>
                         <form action="{{ url_for('hammadde.sil', giris_id=giris.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Bu giriş kaydını silmek istediğinize emin misiniz? Stok geri alınacaktır.')">
                             <button type="submit" class="btn btn-sm btn-danger" title="Sil">🗑️</button>
@@ -152,6 +158,42 @@ function hammaddeTipiDegisti() {
     } else {
         pvcFields.style.display = 'none';
         siloFields.style.display = 'none';
+    }
+    
+    // Tedarikçileri filtrele
+    const tedarikciSelect = document.getElementById('tedarikci_id');
+    tedarikciSelect.innerHTML = '<option value="">-- Seçin --</option>';
+    if (tip) {
+        const tedarikciMap = {{ tedarikci_map|tojson|safe }};
+        tedarikciMap.forEach(t => {
+            // Bu hammadde tipine uygun eşleşmeyi bul
+            const eslesme = t.tipler.find(h => h.tip === tip);
+            if (eslesme) {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = t.ad + (eslesme.kod ? ` (${eslesme.kod})` : '');
+                option.dataset.kod = eslesme.kod || '';
+                tedarikciSelect.appendChild(option);
+            }
+        });
+    }
+    tedarikciDegisti(); // Temizle
+}
+
+function tedarikciDegisti() {
+    const sel = document.getElementById('tedarikci_id');
+    const display = document.getElementById('urun_kodu_display');
+    const hidden = document.getElementById('urun_kodu');
+    
+    const selectedOption = sel.options[sel.selectedIndex];
+    const kod = selectedOption ? (selectedOption.dataset.kod || '') : '';
+    
+    hidden.value = kod;
+    if (kod) {
+        display.textContent = 'Ürün Kodu: ' + kod;
+        display.style.display = 'block';
+    } else {
+        display.style.display = 'none';
     }
 }
 

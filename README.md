@@ -1,28 +1,16 @@
-# Hammadde Takip — PVC Streç Üretim Hattı
+# Hammadde Takip
 
-PVC streç film üretiminde kullanılan hammaddelerin stok girişi, silo/depolama seviye takibi, mikser formülüne göre parti bazlı tüketim hesabı ve günlük raporlama ihtiyaçlarını karşılayan bir **Python Flask** web uygulaması.
+Plastik film üretiminde kullanılan hammaddelerin stok girişi, silo/depolama seviye takibi, mikser formülüne göre parti bazlı tüketim hesabı ve günlük raporlama ihtiyaçlarını karşılayan bir **Python Flask** web uygulaması.
 
 ## 🏭 Özellikler
 
-- **Dashboard:** Silo/tank doluluk seviyeleri, PVC bigbag stoku, günlük üretim özeti
-- **Hammadde Giriş:** Tanker (DOA, DOTP, ESBO), Bigbag (PVC), IBC/Varil (Antifog, Stabilizer, Slip) girişleri
+- **Dashboard:** Silo/tank doluluk seviyeleri, bigbag stoku, günlük üretim özeti
+- **Hammadde Giriş:** Tanker, Bigbag, IBC/Varil girişleri
 - **Formül Yönetimi:** Çoklu formül oluşturma, düzenleme, kopyalama
 - **Üretim (Parti Kayıt):** Formüle göre otomatik stok düşümü, toplu parti üretimi, stok kontrolü
 - **Geri Dönüşüm:** Kırma tankı (B-kalite) ve pellet tankı (şerit kepek) takibi
 - **Raporlama:** Günlük/tarihsel tüketim raporu, CSV dışa aktarma
 - **Ayarlar:** Silo kapasiteleri, kırma akış hızı, stok düzeltme, veritabanı yedekleme/geri yükleme
-
-## 📦 Hammadde ve Depolama Yapısı
-
-| Hammadde | Depolama | Kapasite |
-|----------|----------|----------|
-| PVC | Bigbag (750/1000/1100 kg) | Adet + kg takibi |
-| DOA | Silo | 20 m³ |
-| DOTP | Silo (2 adet) | 20 m³ + 30 m³ |
-| ESBO | Silo (2 adet) | 15 m³ + 30 m³ |
-| Antifog | Mikser tankı | 1 m³ |
-| Stabilizer | Mikser tankı | 1 m³ |
-| Slip | Mikser tankı | 1 m³ |
 
 **Geri Dönüşüm Tankları:** Kırma Tankı + Pellet Tankı
 

@@ -26,6 +26,11 @@
             {% if formul.slip_kg > 0 %}
             <div class="formul-row"><span>Slip</span><strong>{{ formul.slip_kg|sayi }} kg</strong></div>
             {% endif %}
+            {% if formul.ekstra_bilesenler %}
+                {% for e_ad, e_kg in formul.ekstra_bilesenler.items() %}
+                <div class="formul-row"><span style="color:var(--primary-color);">{{ e_ad }}</span><strong>{{ e_kg|sayi }} kg</strong></div>
+                {% endfor %}
+            {% endif %}
             <div class="formul-divider"></div>
             {% if formul.pellet_kg > 0 %}
             <div class="formul-row formul-row-gd"><span>Pellet G.D.</span><strong>{{ formul.pellet_kg|sayi }} kg</strong></div>
@@ -40,7 +45,7 @@
             <small>Güncelleme: {{ formul.updated_at|tarih_saat }}</small>
         </div>
         <div class="formul-actions">
-            <button class="btn btn-sm btn-secondary" onclick="formulDuzenle({{ formul.id }}, '{{ formul.ad }}', {{ formul.pvc_kg }}, {{ formul.dotp_kg }}, {{ formul.doa_kg }}, {{ formul.esbo_kg }}, {{ formul.antifog_kg }}, {{ formul.stabilizer_kg }}, {{ formul.slip_kg }}, {{ formul.pellet_kg }}, {{ formul.kirma_sure_sn }}, {{ 'true' if formul.varsayilan else 'false' }})">✏️ Düzenle</button>
+            <button class="btn btn-sm btn-secondary" onclick="formulDuzenle({{ formul.id }}, '{{ formul.ad }}', {{ formul.pvc_kg }}, {{ formul.dotp_kg }}, {{ formul.doa_kg }}, {{ formul.esbo_kg }}, {{ formul.antifog_kg }}, {{ formul.stabilizer_kg }}, {{ formul.slip_kg }}, {{ formul.pellet_kg }}, {{ formul.kirma_sure_sn }}, {{ 'true' if formul.varsayilan else 'false' }}, {{ formul.ekstra_bilesenler|tojson|forceescape }})">✏️ Düzenle</button>
             <form action="{{ url_for('formul.kopyala', formul_id=formul.id) }}" method="POST" class="inline-form">
                 <button type="submit" class="btn btn-sm btn-secondary">📋 Kopyala</button>
             </form>
@@ -104,7 +109,10 @@
                         <input type="number" name="slip_kg" id="f_slip" class="form-control" step="0.1" value="0">
                     </div>
                 </div>
-                <div class="form-section-title">Geri Dönüşüm</div>
+                <div class="form-section-title">Ekstra Hammaddeler <button type="button" class="btn btn-sm btn-secondary" style="float:right; padding:2px 8px;" onclick="ekstraSatirEkle()">+ Ekle</button></div>
+                <div id="ekstra_container"></div>
+
+                <div class="form-section-title" style="margin-top: 15px;">Geri Dönüşüm</div>
                 <div class="form-grid-2">
                     <div class="form-group">
                         <label>Pellet (kg)</label>
@@ -147,10 +155,11 @@ function formulModalAc() {
     document.getElementById('f_pellet').value = 0;
     document.getElementById('f_kirma').value = 0;
     document.getElementById('f_varsayilan').checked = false;
+    document.getElementById('ekstra_container').innerHTML = '';
     document.getElementById('formulModal').classList.add('active');
 }
 
-function formulDuzenle(id, ad, pvc, dotp, doa, esbo, antifog, stabilizer, slip, pellet, kirma, varsayilan) {
+function formulDuzenle(id, ad, pvc, dotp, doa, esbo, antifog, stabilizer, slip, pellet, kirma, varsayilan, ekstra_bilesenler) {
     document.getElementById('modalTitle').textContent = 'Formül Düzenle';
     document.getElementById('formul_id').value = id;
     document.getElementById('formul_ad').value = ad;
@@ -164,7 +173,47 @@ function formulDuzenle(id, ad, pvc, dotp, doa, esbo, antifog, stabilizer, slip, 
     document.getElementById('f_pellet').value = pellet;
     document.getElementById('f_kirma').value = kirma;
     document.getElementById('f_varsayilan').checked = varsayilan;
+    
+    const container = document.getElementById('ekstra_container');
+    container.innerHTML = '';
+    if (ekstra_bilesenler) {
+        for (const [ad, kg] of Object.entries(ekstra_bilesenler)) {
+            ekstraSatirEkle(ad, kg);
+        }
+    }
+    
     document.getElementById('formulModal').classList.add('active');
+}
+
+const ekstra_secenekler = {{ ekstra_hammaddeler|tojson|safe }};
+
+function ekstraSatirEkle(seciliAd = '', kg = 0) {
+    const container = document.getElementById('ekstra_container');
+    const div = document.createElement('div');
+    div.className = 'form-grid-2';
+    div.style.marginBottom = '10px';
+    
+    let selectHTML = '<select name="ekstra_ad[]" class="form-control" required><option value="">-- Seçin --</option>';
+    ekstra_secenekler.forEach(h => {
+        const selected = (h === seciliAd) ? 'selected' : '';
+        selectHTML += `<option value="${h}" ${selected}>${h}</option>`;
+    });
+    // Eğer ekstra seçenek veritabanında yoksa ama formülde varsa onu da ekle
+    if (seciliAd && !ekstra_secenekler.includes(seciliAd)) {
+        selectHTML += `<option value="${seciliAd}" selected>${seciliAd}</option>`;
+    }
+    selectHTML += '</select>';
+    
+    div.innerHTML = `
+        <div class="form-group" style="margin-bottom:0;">
+            ${selectHTML}
+        </div>
+        <div class="form-group" style="margin-bottom:0; display:flex; gap:10px;">
+            <input type="number" name="ekstra_kg[]" class="form-control" step="0.1" value="${kg}" required>
+            <button type="button" class="btn btn-danger" onclick="this.parentElement.parentElement.remove()">Sil</button>
+        </div>
+    `;
+    container.appendChild(div);
 }
 
 function formulModalKapat() {

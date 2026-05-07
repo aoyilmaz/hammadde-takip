@@ -3,7 +3,7 @@ Formül yönetimi route — Mikser formüllerinin CRUD işlemleri.
 """
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import db, Formul
+from models import db, Formul, Silo
 
 formul_bp = Blueprint('formul', __name__)
 
@@ -12,7 +12,10 @@ formul_bp = Blueprint('formul', __name__)
 def index():
     """Formül listesi."""
     formuller = Formul.query.filter_by(aktif=True).order_by(Formul.varsayilan.desc(), Formul.ad).all()
-    return render_template('formul.html', formuller=formuller)
+    varsayilan_tipler = ['DOA', 'DOTP', 'ESBO', 'Antifog', 'Stabilizer', 'Slip', 'Kırma', 'Pellet', 'PVC']
+    ekstra_hammaddeler = db.session.query(Silo.hammadde_tipi).filter(~Silo.hammadde_tipi.in_(varsayilan_tipler)).distinct().all()
+    ekstra_hammaddeler = [h[0] for h in ekstra_hammaddeler]
+    return render_template('formul.html', formuller=formuller, ekstra_hammaddeler=ekstra_hammaddeler)
 
 
 @formul_bp.route('/kaydet', methods=['POST'])
@@ -38,6 +41,18 @@ def kaydet():
     formul.pellet_kg = float(request.form.get('pellet_kg', 0) or 0)
     formul.kirma_sure_sn = float(request.form.get('kirma_sure_sn', 0) or 0)
     formul.updated_at = datetime.utcnow()
+
+    # Dinamik Ekstra Hammaddeler
+    ekstra_ad = request.form.getlist('ekstra_ad[]')
+    ekstra_kg = request.form.getlist('ekstra_kg[]')
+    ekstra_dict = {}
+    for k, v in zip(ekstra_ad, ekstra_kg):
+        if k and v:
+            try:
+                ekstra_dict[k] = float(v)
+            except ValueError:
+                pass
+    formul.ekstra_bilesenler = ekstra_dict
 
     varsayilan = request.form.get('varsayilan') == 'on'
     if varsayilan:
@@ -71,6 +86,7 @@ def kopyala(formul_id):
         doa_kg=kaynak.doa_kg, esbo_kg=kaynak.esbo_kg, antifog_kg=kaynak.antifog_kg,
         stabilizer_kg=kaynak.stabilizer_kg, slip_kg=kaynak.slip_kg,
         pellet_kg=kaynak.pellet_kg, kirma_sure_sn=kaynak.kirma_sure_sn,
+        ekstra_bilesenler=kaynak.ekstra_bilesenler,
         varsayilan=False, aktif=True
     )
     db.session.add(yeni)

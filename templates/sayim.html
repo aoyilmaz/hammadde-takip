@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Sayım / Stok Düzeltme{% endblock %}
+{% block page_title %}Toplu Sayım ve Stok Düzeltme{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <div class="form-card">
+        <h3 class="card-title">Yeni Sayım Girişi</h3>
+        <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9em;">Mevcut stok değerinden farklı bir fiziksel miktar girdiğinizde, stok sayım formuna göre eşitlenecektir. Değişiklik yapılmayacak alanları boş bırakabilirsiniz.</p>
+        
+        <form action="{{ url_for('sayim.kaydet') }}" method="POST">
+            <div class="form-group">
+                <label for="yapan_kisi">Sayan Kişi</label>
+                <input type="text" name="yapan_kisi" id="yapan_kisi" class="form-control" placeholder="Ad Soyad" required>
+            </div>
+            
+            <h4 style="margin: 15px 0 10px; color: var(--primary-color);">Silolar ve Tanklar (kg)</h4>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Silo / Tank</th>
+                            <th>Mevcut Sistem (kg)</th>
+                            <th width="150">Sayılan (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for silo in silolar %}
+                        <tr>
+                            <td>{{ silo.ad }} <br><small class="text-muted">{{ silo.hammadde_tipi }}</small></td>
+                            <td>{{ silo.mevcut_kg|sayi }}</td>
+                            <td>
+                                <input type="number" name="silo_{{ silo.id }}" class="form-control form-control-sm" step="0.1" placeholder="Düzeltme yok">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 style="margin: 15px 0 10px; color: var(--primary-color);">PVC Bigbag (Adet)</h4>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Bigbag Tipi</th>
+                            <th>Mevcut Sistem (Adet)</th>
+                            <th width="150">Sayılan (Adet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pvc in pvc_stoklar %}
+                        <tr>
+                            <td>{{ pvc.bigbag_tipi }} kg PVC <br><small class="text-muted">Kod: {{ pvc.urun_kodu }}</small></td>
+                            <td>{{ pvc.adet }}</td>
+                            <td>
+                                <input type="number" name="pvc_{{ pvc.id }}" class="form-control form-control-sm" placeholder="Düzeltme yok">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if gd_bigbagler %}
+            <h4 style="margin: 15px 0 10px; color: var(--primary-color);">Geri Dönüşüm Bigbag (Adet)</h4>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Bigbag Ağırlığı</th>
+                            <th>Mevcut Sistem (Adet)</th>
+                            <th width="150">Sayılan (Adet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gd in gd_bigbagler %}
+                        <tr>
+                            <td>{{ gd.agirlik_kg }} kg G.D.</td>
+                            <td>{{ gd.adet }}</td>
+                            <td>
+                                <input type="number" name="gd_{{ gd.id }}" class="form-control form-control-sm" placeholder="Düzeltme yok">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="2" placeholder="Sayım ile ilgili notlar..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 10px;" onclick="return confirm('Girdiğiniz değerlerle stoklar eşitlenecektir. Onaylıyor musunuz?')">Sayımı Kaydet ve Stokları Eşitle</button>
+        </form>
+    </div>
+
+    <!-- Sağ: Geçmiş Sayımlar -->
+    <div class="table-card">
+        <h3 class="card-title">Son Sayımlar</h3>
+        {% if sayimlar %}
+            {% for sayim in sayimlar %}
+            <div class="formul-card" style="margin-bottom: 15px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: var(--text-primary);">Sayım: {{ sayim.tarih|tarih_saat }}</h4>
+                    <span class="badge badge-primary">{{ sayim.yapan_kisi }}</span>
+                </div>
+                <div class="formul-details">
+                    {% for detay in sayim.detaylar %}
+                    <div class="formul-row" style="border-bottom: 1px dashed var(--border-color); padding: 5px 0;">
+                        <span style="flex:2;">{{ detay.kalem_adi }}</span>
+                        <span style="flex:1; text-align:right;" class="text-muted">{{ detay.onceki_miktar|sayi }} &rarr;</span>
+                        <strong style="flex:1; text-align:right;">{{ detay.sayilan_miktar|sayi }}</strong>
+                        <span style="flex:1; text-align:right; color: {{ 'green' if detay.fark > 0 else 'red' }};">
+                            {% if detay.fark > 0 %}+{% endif %}{{ detay.fark|sayi }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if sayim.notlar %}
+                <p style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary); background: var(--bg-primary); padding: 8px; border-radius: 4px;">{{ sayim.notlar }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon">📝</span>
+            <p>Henüz kayıtlı bir sayım bulunmuyor.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -28,6 +28,16 @@ def stok_kontrol(formul, parti_sayisi=1):
         mevcut = db.session.query(db.func.sum(Silo.mevcut_kg)).filter_by(hammadde_tipi=tip).scalar() or 0
         if gerekli > mevcut:
             eksikler.append(f'{tip}: Gerekli {gerekli} kg, Mevcut {mevcut} kg')
+            
+    # Ekstra bileşenlerin stok kontrolü
+    if formul.ekstra_bilesenler:
+        for tip, miktar in formul.ekstra_bilesenler.items():
+            gerekli = float(miktar) * parti_sayisi
+            if gerekli <= 0:
+                continue
+            mevcut = db.session.query(db.func.sum(Silo.mevcut_kg)).filter_by(hammadde_tipi=tip).scalar() or 0
+            if gerekli > mevcut:
+                eksikler.append(f'{tip}: Gerekli {gerekli} kg, Mevcut {mevcut} kg')
 
     # Geri dönüşüm kontrolleri
     if formul.pellet_kg > 0:
@@ -83,6 +93,22 @@ def stok_dus(formul):
             silo.mevcut_kg -= dusulecek
             silo.updated_at = datetime.utcnow()
             kalan -= dusulecek
+
+    # Ekstra bileşenlerden düşüm
+    if formul.ekstra_bilesenler:
+        for tip, miktar in formul.ekstra_bilesenler.items():
+            miktar = float(miktar)
+            if miktar <= 0:
+                continue
+            silolar_tip = Silo.query.filter_by(hammadde_tipi=tip).order_by(Silo.id).all()
+            kalan = miktar
+            for silo in silolar_tip:
+                if kalan <= 0:
+                    break
+                dusulecek = min(kalan, silo.mevcut_kg)
+                silo.mevcut_kg -= dusulecek
+                silo.updated_at = datetime.utcnow()
+                kalan -= dusulecek
 
     # Pellet tankından düşüm
     if formul.pellet_kg > 0:

@@ -56,6 +56,8 @@ def create_app():
     from routes.geri_donus import geri_donus_bp
     from routes.rapor import rapor_bp
     from routes.ayarlar import ayarlar_bp
+    from routes.tedarikci import tedarikci_bp
+    from routes.sayim import sayim_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(hammadde_bp, url_prefix='/hammadde')
@@ -64,6 +66,8 @@ def create_app():
     app.register_blueprint(geri_donus_bp, url_prefix='/geri-donus')
     app.register_blueprint(rapor_bp, url_prefix='/rapor')
     app.register_blueprint(ayarlar_bp, url_prefix='/ayarlar')
+    app.register_blueprint(tedarikci_bp, url_prefix='/tedarikci')
+    app.register_blueprint(sayim_bp, url_prefix='/sayim')
 
     # Veritabanını oluştur ve başlangıç verilerini ekle
     with app.app_context():

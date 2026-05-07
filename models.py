@@ -60,11 +60,12 @@ class Silo(db.Model):
 
 
 class PvcStok(db.Model):
-    """PVC bigbag stok takibi — her bigbag tipi için bir kayıt."""
+    """PVC bigbag stok takibi — her bigbag tipi ve ürün kodu için bir kayıt."""
     __tablename__ = 'pvc_stok'
 
     id = db.Column(db.Integer, primary_key=True)
     bigbag_tipi = db.Column(db.Integer, nullable=False)  # 750, 1000, 1100 (kg)
+    urun_kodu = db.Column(db.String(100), default='Standart') # Ürün kodu ayrımı
     adet = db.Column(db.Integer, default=0)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -89,6 +90,36 @@ class PvcStok(db.Model):
         return sum(s.adet for s in stoklar)
 
 
+class Tedarikci(db.Model):
+    """Tedarikçi firma bilgileri."""
+    __tablename__ = 'tedarikciler'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(200), nullable=False)
+    iletisim_kisi = db.Column(db.String(100))
+    telefon = db.Column(db.String(50))
+    eposta = db.Column(db.String(100))
+    notlar = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    aktif = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f'<Tedarikci {self.ad}>'
+
+
+class TedarikciHammadde(db.Model):
+    """Tedarikçilerin hangi hammaddeleri sattığını tutan eşleştirme."""
+    __tablename__ = 'tedarikci_hammadde'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tedarikci_id = db.Column(db.Integer, db.ForeignKey('tedarikciler.id', ondelete='CASCADE'), nullable=False)
+    hammadde_tipi = db.Column(db.String(50), nullable=False)
+    urun_kodu = db.Column(db.String(100), nullable=True)  # Tedarikçinin bu hammadde için kullandığı ürün kodu
+    
+    tedarikci = db.relationship('Tedarikci', backref=db.backref('hammadde_tipleri', cascade='all, delete-orphan'))
+
+
+
 class HammaddeGiris(db.Model):
     """Hammadde giriş kayıtları (tanker, bigbag, IBC/varil)."""
     __tablename__ = 'hammadde_giris'
@@ -99,14 +130,17 @@ class HammaddeGiris(db.Model):
     miktar_kg = db.Column(db.Float, nullable=False)
     bigbag_tipi = db.Column(db.Integer, nullable=True)  # 750, 1000, 1100 (sadece PVC için)
     bigbag_adet = db.Column(db.Integer, nullable=True)  # Sadece PVC için
-    tedarikci = db.Column(db.String(200))
+    tedarikci = db.Column(db.String(200)) # Geriye dönük uyumluluk için eski metin alanı
+    tedarikci_id = db.Column(db.Integer, db.ForeignKey('tedarikciler.id'), nullable=True)
     irsaliye_no = db.Column(db.String(100))
+    urun_kodu = db.Column(db.String(100)) # Snapshot of product code from supplier
     tarih = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     notlar = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # İlişkiler
     silo = db.relationship('Silo', backref='girisler')
+    tedarikci_rel = db.relationship('Tedarikci', backref='giris_kayitlari')
 
     def __repr__(self):
         return f'<HammaddeGiris {self.hammadde_tipi} {self.miktar_kg}kg>'
@@ -129,14 +163,22 @@ class Formul(db.Model):
     kirma_sure_sn = db.Column(db.Float, default=0.0)
     varsayilan = db.Column(db.Boolean, default=False)
     aktif = db.Column(db.Boolean, default=True)
+    ekstra_bilesenler = db.Column(db.JSON, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @property
     def toplam_hammadde_kg(self):
         """Bir partinin toplam hammadde miktarını hesaplar (geri dönüşüm hariç)."""
-        return (self.pvc_kg + self.dotp_kg + self.doa_kg +
+        toplam = (self.pvc_kg + self.dotp_kg + self.doa_kg +
                 self.esbo_kg + self.antifog_kg + self.stabilizer_kg + self.slip_kg)
+        if self.ekstra_bilesenler:
+            for k, v in self.ekstra_bilesenler.items():
+                try:
+                    toplam += float(v)
+                except (ValueError, TypeError):
+                    pass
+        return toplam
 
     def formul_snapshot(self):
         """Parti kaydı için formül anlık görüntüsü (JSON)."""
@@ -151,6 +193,7 @@ class Formul(db.Model):
             'slip_kg': self.slip_kg,
             'pellet_kg': self.pellet_kg,
             'kirma_sure_sn': self.kirma_sure_sn,
+            'ekstra_bilesenler': self.ekstra_bilesenler or {}
         }
 
     def __repr__(self):
@@ -193,3 +236,56 @@ class GeriDonusGiris(db.Model):
 
     def __repr__(self):
         return f'<GeriDonusGiris {self.tank_tipi} {self.miktar_kg}kg>'
+
+
+class GeriDonusBigbagStok(db.Model):
+    """Geri dönüşümden elde edilen bigbag stoku."""
+    __tablename__ = 'geri_donus_bigbag_stok'
+
+    id = db.Column(db.Integer, primary_key=True)
+    agirlik_kg = db.Column(db.Float, nullable=False) # Her bir bigbag ağırlığı
+    adet = db.Column(db.Integer, default=0)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    notlar = db.Column(db.Text)
+
+    @property
+    def toplam_kg(self):
+        return self.agirlik_kg * self.adet
+
+    def __repr__(self):
+        return f'<GeriDonusBigbag {self.agirlik_kg}kg x{self.adet}>'
+
+
+class SayimFisi(db.Model):
+    """Toplu sayım kayıt belgesi."""
+    __tablename__ = 'sayim_fisleri'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    yapan_kisi = db.Column(db.String(100))
+    notlar = db.Column(db.Text)
+    
+    detaylar = db.relationship('SayimDetay', backref='sayim_fisi', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<SayimFisi {self.tarih.strftime("%Y-%m-%d %H:%M")}>'
+
+
+class SayimDetay(db.Model):
+    """Sayım detay satırları."""
+    __tablename__ = 'sayim_detaylari'
+
+    id = db.Column(db.Integer, primary_key=True)
+    sayim_fisi_id = db.Column(db.Integer, db.ForeignKey('sayim_fisleri.id'), nullable=False)
+    
+    # Neyi sayıyoruz? (Silo, PVC, Geri Dönüşüm)
+    kalem_tipi = db.Column(db.String(50), nullable=False) # 'silo', 'pvc_bigbag', 'geri_donus_bigbag'
+    kalem_id = db.Column(db.Integer, nullable=False) # Silo.id veya PvcStok.id
+    kalem_adi = db.Column(db.String(200)) # Örn: "DOTP Silo 1" veya "750kg PVC Bigbag"
+    
+    # Değerler
+    onceki_miktar = db.Column(db.Float, nullable=False)
+    sayilan_miktar = db.Column(db.Float, nullable=False)
+    fark = db.Column(db.Float, nullable=False) # sayilan - onceki
+

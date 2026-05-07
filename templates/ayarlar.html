@@ -9,14 +9,17 @@
     <form action="{{ url_for('ayarlar.kaydet') }}" method="POST" class="form-card">
         <div class="form-grid-2">
             <div class="form-group">
-                <label for="kirma_akis_hizi">Kırma Akış Hızı (kg/sn)</label>
-                <input type="number" name="kirma_akis_hizi" id="kirma_akis_hizi" class="form-control"
-                       step="0.01" min="0.01"
-                       value="{{ ayarlar.get('kirma_akis_hizi', {}).deger if ayarlar.get('kirma_akis_hizi') else '0.1' }}">
-                <small class="form-help">Kırma tankından saniye başına akan malzeme miktarı</small>
+                <label for="kirma_akis_hizi">Kırma Tankı Akış Hızı (kg/sn)</label>
+                <input type="number" name="kirma_akis_hizi" id="kirma_akis_hizi" class="form-control" step="0.01" value="{{ ayarlar.kirma_akis_hizi.deger if 'kirma_akis_hizi' in ayarlar else '0.1' }}" required>
+                <small class="text-muted">Formüldeki saniye başına düşülecek kırma miktarı.</small>
+            </div>
+            <div class="form-group">
+                <label for="haftalik_hedef_parti">Haftalık Hedef Üretim (Parti)</label>
+                <input type="number" name="haftalik_hedef_parti" id="haftalik_hedef_parti" class="form-control" value="{{ ayarlar.haftalik_hedef_parti.deger if 'haftalik_hedef_parti' in ayarlar else '100' }}" required>
+                <small class="text-muted">Dashboard üzerindeki stok bitiş süresi hesaplamaları için kullanılır.</small>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">Ayarları Kaydet</button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Genel Ayarları Kaydet</button>
     </form>
 </div>
 
@@ -56,17 +59,86 @@
             </table>
         </div>
 
-        <h4 style="margin-top: 1.5rem; color: var(--text-primary);">PVC Bigbag Stoku</h4>
-        <div class="pvc-settings-grid">
-            {% for pvc in pvc_stoklar %}
-            <div class="form-group">
-                <label>{{ pvc.bigbag_tipi }} kg Bigbag (Adet)</label>
-                <input type="number" name="pvc_adet_{{ pvc.bigbag_tipi }}" class="form-control" min="0" value="{{ pvc.adet }}">
-            </div>
-            {% endfor %}
+        <h4 style="margin-top: 1.5rem; color: var(--text-primary);">PVC Bigbag Stoku (Kod Bazlı)</h4>
+        <div class="table-scroll" style="margin-bottom: 1rem;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tip (kg)</th>
+                        <th>Ürün Kodu</th>
+                        <th width="150">Adet</th>
+                        <th>Toplam (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pvc in pvc_stoklar %}
+                    <tr>
+                        <td>{{ pvc.bigbag_tipi }} kg</td>
+                        <td><strong>{{ pvc.urun_kodu }}</strong></td>
+                        <td><input type="number" name="pvc_adet_{{ pvc.id }}" class="form-control form-control-sm" min="0" value="{{ pvc.adet }}"></td>
+                        <td>{{ pvc.toplam_kg|sayi }} kg</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         <button type="submit" class="btn btn-primary">Stok Bilgilerini Güncelle</button>
+    </form>
+</div>
+
+<!-- Yeni PVC Tipi / Kodu Ekleme -->
+<div class="settings-section">
+    <h3 class="card-title">📦 Yeni PVC Tipi / Kodu Ekle</h3>
+    <form action="{{ url_for('ayarlar.pvc_ekle') }}" method="POST" class="form-card">
+        <div class="form-grid-3">
+            <div class="form-group">
+                <label for="pvc_tip">Bigbag Tipi (kg)</label>
+                <select name="pvc_tip" id="pvc_tip" class="form-control" required>
+                    <option value="750">750 kg</option>
+                    <option value="1000">1000 kg</option>
+                    <option value="1100">1100 kg</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pvc_kod">Ürün Kodu</label>
+                <input type="text" name="pvc_kod" id="pvc_kod" class="form-control" required placeholder="Örn: K67, K58, vb.">
+            </div>
+            <div class="form-group">
+                <label for="pvc_adet">Başlangıç Adedi</label>
+                <input type="number" name="pvc_adet" id="pvc_adet" class="form-control" min="0" value="0">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-secondary" style="margin-top: 15px;">Yeni PVC Kaydı Oluştur</button>
+    </form>
+</div>
+
+<!-- Yeni Silo / Tank Ekleme -->
+<div class="settings-section">
+    <h3 class="card-title">➕ Yeni Silo / Tank Ekle</h3>
+    <form action="{{ url_for('ayarlar.silo_ekle') }}" method="POST" class="form-card">
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label for="yeni_silo_ad">Silo/Tank Adı</label>
+                <input type="text" name="yeni_silo_ad" id="yeni_silo_ad" class="form-control" required placeholder="Örn: Yeni Kimyasal Tankı">
+            </div>
+            <div class="form-group">
+                <label for="yeni_hammadde_tipi">Hammadde Tipi</label>
+                <input type="text" name="yeni_hammadde_tipi" id="yeni_hammadde_tipi" class="form-control" required placeholder="Örn: KimyasalX">
+            </div>
+            <div class="form-group">
+                <label for="yeni_silo_tip">Depolama Tipi</label>
+                <select name="yeni_silo_tip" id="yeni_silo_tip" class="form-control" required>
+                    <option value="silo">Silo</option>
+                    <option value="tank">Tank</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yeni_silo_kapasite">Kapasite (kg)</label>
+                <input type="number" name="yeni_silo_kapasite" id="yeni_silo_kapasite" class="form-control" required min="1">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-secondary" style="margin-top: 15px;">Yeni Depolama Alanı Ekle</button>
     </form>
 </div>
 

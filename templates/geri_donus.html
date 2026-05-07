@@ -37,6 +37,25 @@
     </div>
 </div>
 
+<!-- Bigbag Stokları (Kenarda Bekleyen) -->
+<div class="table-card" style="margin-bottom: 20px;">
+    <h3 class="card-title">Geri Dönüşüm Bigbag Stokları (Kenarda Bekleyen)</h3>
+    {% if bigbagler %}
+    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        {% for bb in bigbagler %}
+        <div class="silo-card" style="padding: 15px; text-align: center; min-width: 150px;">
+            <div style="font-size: 2em;">♻️</div>
+            <h4>{{ bb.agirlik_kg|sayi }} kg Bigbag</h4>
+            <div style="font-size: 1.5em; font-weight: bold; color: var(--primary-color);">{{ bb.adet }} Adet</div>
+            <small class="text-muted">Toplam: {{ bb.toplam_kg|sayi }} kg</small>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">Kenarda bekleyen geri dönüşüm bigbag stoku bulunmuyor.</p>
+    {% endif %}
+</div>
+
 <div class="two-column">
     <!-- Sol: Giriş Formu -->
     <div class="form-card">
@@ -65,9 +84,30 @@
         </form>
     </div>
 
-    <!-- Sağ: Giriş Geçmişi -->
-    <div class="table-card">
-        <h3 class="card-title">Giriş Geçmişi</h3>
+    <!-- Sağ: Bigbag Üretim Formu -->
+    <div class="form-card">
+        <h3 class="card-title">Geri Dönüşüm Bigbag Üretimi (Stoka Alma)</h3>
+        <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9em;">Kenarda tutulacak geri dönüşüm bigbaglerini buradan stoklayabilirsiniz.</p>
+        <form action="{{ url_for('geri_donus.bigbag_ekle') }}" method="POST">
+            <div class="form-group">
+                <label for="agirlik_kg">Bigbag Ağırlığı (kg)</label>
+                <input type="number" name="agirlik_kg" id="agirlik_kg" class="form-control" step="0.1" min="1" required placeholder="Örn: 1000">
+            </div>
+            <div class="form-group">
+                <label for="adet">Adet</label>
+                <input type="number" name="adet" id="adet" class="form-control" min="1" value="1" required>
+            </div>
+            <div class="form-group">
+                <label for="notlar_bb">Notlar</label>
+                <textarea name="notlar" id="notlar_bb" class="form-control" rows="2" placeholder="Ek notlar..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Bigbag Olarak Stoka Ekle</button>
+        </form>
+    </div>
+</div>
+
+<div class="table-card" style="margin-top: 20px;">
+    <h3 class="card-title">Tank Giriş Geçmişi</h3>
         {% if girisler %}
         <table class="data-table">
             <thead>
@@ -96,5 +136,4 @@
         </div>
         {% endif %}
     </div>
-</div>
 {% endblock %}

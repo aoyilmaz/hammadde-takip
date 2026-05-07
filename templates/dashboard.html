@@ -67,7 +67,7 @@
     <div class="pvc-card">
         <div class="pvc-icon">📦</div>
         <div class="pvc-info">
-            <span class="pvc-type">{{ pvc.bigbag_tipi }} kg</span>
+            <span class="pvc-type">{{ pvc.bigbag_tipi }} kg - <small>{{ pvc.urun_kodu }}</small></span>
             <span class="pvc-count">{{ pvc.adet }} Adet</span>
             <span class="pvc-total">{{ pvc.toplam_kg|sayi }} kg</span>
         </div>
@@ -97,6 +97,51 @@
     </div>
     {% endfor %}
 </div>
+
+</div>
+
+<!-- Tahmini Bitiş Süresi -->
+{% if tahminler %}
+<div class="section-header">
+    <h2>Tahmini Stok Bitiş Süresi <small class="text-muted" style="font-size: 0.6em; font-weight: normal; margin-left: 10px;">(Haftalık Hedef: {{ haftalik_hedef }} Parti)</small></h2>
+</div>
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Hammadde</th>
+                <th>Mevcut Stok</th>
+                <th>Haftalık Tüketim</th>
+                <th>Kalan Süre (Hafta)</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tip, veri in tahminler.items() %}
+            <tr>
+                <td><strong>{{ tip }}</strong></td>
+                <td>{{ veri.mevcut_stok|sayi }} kg</td>
+                <td>{{ veri.haftalik_tuketim|sayi }} kg</td>
+                <td>
+                    <span style="font-size: 1.1em; font-weight: bold; color: {% if veri.hafta_kalan < 1 %}var(--danger-color){% elif veri.hafta_kalan < 2 %}var(--warning-color){% else %}var(--primary-color){% endif %};">
+                        {{ "%.1f"|format(veri.hafta_kalan) }}
+                    </span>
+                </td>
+                <td>
+                    {% if veri.hafta_kalan < 1 %}
+                    <span class="badge badge-red">Kritik</span>
+                    {% elif veri.hafta_kalan < 2 %}
+                    <span class="badge badge-orange">Sipariş Ver</span>
+                    {% else %}
+                    <span class="badge badge-green">Yeterli</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 
 <!-- Bugünkü Tüketim -->
 {% if bugun_parti_sayisi > 0 %}
