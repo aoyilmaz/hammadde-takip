@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db, Silo, PvcStok, GeriDonusBigbagStok, SayimFisi, SayimDetay
+from services.stok import parse_float, parse_int
 
 sayim_bp = Blueprint('sayim', __name__)
 
@@ -36,7 +37,7 @@ def kaydet():
     for silo in silolar:
         sayilan_str = request.form.get(f'silo_{silo.id}')
         if sayilan_str is not None and sayilan_str.strip() != '':
-            sayilan = float(sayilan_str)
+            sayilan = parse_float(sayilan_str)
             if round(sayilan, 1) != round(silo.mevcut_kg, 1):
                 fark = sayilan - silo.mevcut_kg
                 detay = SayimDetay(
@@ -57,21 +58,28 @@ def kaydet():
     pvc_stoklar = PvcStok.query.all()
     for pvc in pvc_stoklar:
         sayilan_str = request.form.get(f'pvc_{pvc.id}')
-        if sayilan_str is not None and sayilan_str.strip() != '':
-            sayilan = int(sayilan_str)
-            if sayilan != pvc.adet:
-                fark = sayilan - pvc.adet
+        acik_str = request.form.get(f'pvc_acik_{pvc.id}')
+        if ((sayilan_str is not None and sayilan_str.strip() != '') or
+                (acik_str is not None and acik_str.strip() != '')):
+            sayilan_adet = parse_int(sayilan_str, pvc.adet)
+            sayilan_acik_kg = parse_float(acik_str, pvc.acik_kg or 0)
+            sayilan_kg = sayilan_adet * pvc.bigbag_tipi + sayilan_acik_kg
+            onceki_kg = pvc.toplam_kg
+            if round(sayilan_kg, 1) != round(onceki_kg, 1):
+                fark = sayilan_kg - onceki_kg
                 detay = SayimDetay(
                     sayim_fisi_id=yeni_sayim.id,
                     kalem_tipi='pvc_bigbag',
                     kalem_id=pvc.id,
                     kalem_adi=f"{pvc.bigbag_tipi} kg PVC Bigbag ({pvc.urun_kodu})",
-                    onceki_miktar=pvc.adet,
-                    sayilan_miktar=sayilan,
+                    onceki_miktar=onceki_kg,
+                    sayilan_miktar=sayilan_kg,
                     fark=fark
                 )
                 db.session.add(detay)
-                pvc.adet = sayilan
+                pvc.adet = sayilan_adet
+                pvc.acik_kg = sayilan_acik_kg
+                pvc.mevcut_kg = sayilan_kg
                 pvc.updated_at = datetime.utcnow()
                 degisim_var = True
 
@@ -80,7 +88,7 @@ def kaydet():
     for gd in gd_bigbagler:
         sayilan_str = request.form.get(f'gd_{gd.id}')
         if sayilan_str is not None and sayilan_str.strip() != '':
-            sayilan = int(sayilan_str)
+            sayilan = parse_int(sayilan_str)
             if sayilan != gd.adet:
                 fark = sayilan - gd.adet
                 detay = SayimDetay(

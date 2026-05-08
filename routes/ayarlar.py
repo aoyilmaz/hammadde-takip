@@ -5,7 +5,8 @@ import os
 import shutil
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
-from models import db, Ayar, Silo, PvcStok
+from models import db, Ayar
+from services.stok import parse_float, parse_int
 
 ayarlar_bp = Blueprint('ayarlar', __name__)
 
@@ -14,9 +15,7 @@ ayarlar_bp = Blueprint('ayarlar', __name__)
 def index():
     """Ayarlar sayfası."""
     ayarlar = {a.anahtar: a for a in Ayar.query.all()}
-    silolar = Silo.query.order_by(Silo.id).all()
-    pvc_stoklar = PvcStok.query.all()
-    return render_template('ayarlar.html', ayarlar=ayarlar, silolar=silolar, pvc_stoklar=pvc_stoklar)
+    return render_template('ayarlar.html', ayarlar=ayarlar)
 
 
 @ayarlar_bp.route('/kaydet', methods=['POST'])
@@ -43,88 +42,6 @@ def kaydet():
     db.session.commit()
     flash('Ayarlar kaydedildi.', 'success')
     return redirect(url_for('ayarlar.index'))
-
-
-@ayarlar_bp.route('/silo-guncelle', methods=['POST'])
-def silo_guncelle():
-    """Silo kapasitelerini ve mevcut stokları güncelle."""
-    silolar = Silo.query.all()
-    for silo in silolar:
-        kapasite_key = f'kapasite_{silo.id}'
-        mevcut_key = f'mevcut_{silo.id}'
-        if kapasite_key in request.form:
-            silo.kapasite_kg = float(request.form.get(kapasite_key, silo.kapasite_kg) or silo.kapasite_kg)
-        if mevcut_key in request.form:
-            silo.mevcut_kg = float(request.form.get(mevcut_key, silo.mevcut_kg) or silo.mevcut_kg)
-        silo.updated_at = datetime.utcnow()
-
-    # PVC bigbag stokları güncelle
-    for pvc in PvcStok.query.all():
-        adet_key = f'pvc_adet_{pvc.id}'
-        if adet_key in request.form:
-            pvc.adet = int(request.form.get(adet_key, pvc.adet) or pvc.adet)
-            pvc.updated_at = datetime.utcnow()
-
-    db.session.commit()
-    flash('Silo ve stok bilgileri güncellendi.', 'success')
-    return redirect(url_for('ayarlar.index'))
-
-
-@ayarlar_bp.route('/silo-ekle', methods=['POST'])
-def silo_ekle():
-    """Yeni bir silo/tank (yeni hammadde tipi) ekle."""
-    ad = request.form.get('yeni_silo_ad')
-    tip = request.form.get('yeni_silo_tip')
-    hammadde_tipi = request.form.get('yeni_hammadde_tipi')
-    kapasite_kg = request.form.get('yeni_silo_kapasite')
-
-    if not all([ad, tip, hammadde_tipi, kapasite_kg]):
-        flash('Lütfen tüm alanları doldurun.', 'error')
-        return redirect(url_for('ayarlar.index'))
-
-    try:
-        kapasite = float(kapasite_kg)
-    except ValueError:
-        flash('Geçersiz kapasite değeri.', 'error')
-        return redirect(url_for('ayarlar.index'))
-
-    yeni_silo = Silo(
-        ad=ad,
-        hammadde_tipi=hammadde_tipi,
-        silo_tipi=tip,
-        kapasite_kg=kapasite,
-        mevcut_kg=0.0
-    )
-    db.session.add(yeni_silo)
-    db.session.commit()
-    flash(f'{ad} başarıyla eklendi.', 'success')
-    return redirect(url_for('ayarlar.index'))
-
-
-@ayarlar_bp.route('/pvc-ekle', methods=['POST'])
-def pvc_ekle():
-    """Yeni bir PVC tipi veya kodu ekle."""
-    tip = request.form.get('pvc_tip')
-    kod = request.form.get('pvc_kod', 'Standart')
-    adet = int(request.form.get('pvc_adet', 0) or 0)
-
-    if not tip:
-        flash('Lütfen bigbag tipini seçin.', 'error')
-        return redirect(url_for('ayarlar.index'))
-
-    # Aynı tip ve kod var mı?
-    mevcut = PvcStok.query.filter_by(bigbag_tipi=int(tip), urun_kodu=kod).first()
-    if mevcut:
-        flash(f'{tip} kg - {kod} zaten mevcut. Stokları yukarıdaki tablodan güncelleyebilirsiniz.', 'warning')
-    else:
-        yeni = PvcStok(bigbag_tipi=int(tip), urun_kodu=kod, adet=adet)
-        db.session.add(yeni)
-        db.session.commit()
-        flash(f'Yeni PVC stoku eklendi: {tip} kg - {kod}', 'success')
-
-    return redirect(url_for('ayarlar.index'))
-
-
 
 @ayarlar_bp.route('/yedekle')
 def yedekle():

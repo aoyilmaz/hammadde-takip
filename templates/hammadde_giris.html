@@ -17,24 +17,35 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group">
+                <label for="hammadde_kart_secimi">Tanımlı Hammadde</label>
+                <select id="hammadde_kart_secimi" class="form-control" onchange="hammaddeKartiSecildi()">
+                    <option value="">-- Hammadde kartı seçin --</option>
+                </select>
+            </div>
 
+            <!-- PVC Bigbag alanları -->
             <!-- PVC Bigbag alanları -->
             <div id="pvcFields" style="display:none;">
                 <div class="form-group">
                     <label for="bigbag_tipi">Bigbag Tipi (kg)</label>
                     <select name="bigbag_tipi" id="bigbag_tipi" class="form-control">
-                        <option value="750">750 kg</option>
-                        <option value="1000">1.000 kg</option>
-                        <option value="1100">1.100 kg</option>
+                        {% for tipi in bigbag_tipleri %}
+                        <option value="{{ tipi }}">{{ tipi }} kg</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="bigbag_adet">Adet</label>
-                    <input type="number" name="bigbag_adet" id="bigbag_adet" class="form-control" min="1" value="1" onchange="bigbagHesapla()">
+                    <input type="number" name="bigbag_adet" id="bigbag_adet" class="form-control" min="1" value="1">
                 </div>
                 <div class="form-group">
-                    <label>Toplam kg</label>
-                    <div class="calculated-value" id="bigbagToplam">750 kg</div>
+                    <label for="pvc_acik_kg">Açık / Ek PVC (kg)</label>
+                    <input type="number" name="pvc_acik_kg" id="pvc_acik_kg" class="form-control" step="0.1" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Hesaplanan Miktar</label>
+                    <div class="calculated-value" id="bigbagToplam">0 kg</div>
                 </div>
             </div>
 
@@ -48,9 +59,62 @@
                         {% endfor %}
                     </select>
                 </div>
+            </div>
+
+            <!-- Ortak Miktar Alanı -->
+            <div class="form-group" style="background: rgba(56,189,248,0.05); padding: 10px; border-radius: var(--radius-sm); border: 1px dashed var(--accent);">
+                <label for="miktar_kg" style="color: var(--accent); font-weight: 700;">Net Giriş Miktarı (kg)</label>
+                <input type="number" name="miktar_kg" id="miktar_kg" class="form-control" step="0.1" min="0.1" required placeholder="Kantar fişindeki net ağırlığı girin">
+                <small class="form-help">Paketleme seçildiğinde otomatik hesaplanır, ancak kantar ağırlığına göre manuel değiştirebilirsiniz.</small>
+            </div>
+
+            <div class="form-section-title">Lot ve Ambalaj Bilgisi</div>
+            <div class="form-grid-2">
                 <div class="form-group">
-                    <label for="miktar_kg">Miktar (kg)</label>
-                    <input type="number" name="miktar_kg" id="miktar_kg" class="form-control" step="0.1" min="0.1">
+                    <label for="uretici_ad">Üretici</label>
+                    <input type="text" name="uretici_ad" id="uretici_ad" class="form-control" placeholder="Malzemenin üreticisi">
+                </div>
+                <div class="form-group">
+                    <label for="lot_no">Lot No</label>
+                    <input type="text" name="lot_no" id="lot_no" class="form-control" placeholder="Lot / parti no">
+                </div>
+            </div>
+
+            <div id="genericPackagingFields">
+                <div class="form-group">
+                    <label for="paketleme_tipi">Paketleme</label>
+                    <select name="paketleme_tipi" id="paketleme_tipi" class="form-control" onchange="paketlemeDegisti()">
+                        <option value="dokme">Dökme / Tanker / Manuel kg</option>
+                        <option value="ibc">IBC</option>
+                        <option value="varil">Varil</option>
+                        <option value="bigbag">Bigbag</option>
+                        <option value="torba">Torba</option>
+                        <option value="palet">Torbalı Palet</option>
+                    </select>
+                </div>
+                <div class="form-grid-2" id="paketFields" style="display:none;">
+                    <div class="form-group">
+                        <label for="paket_adet">Paket Adedi</label>
+                        <input type="number" name="paket_adet" id="paket_adet" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="birim_agirlik_kg">Birim Ağırlık (kg)</label>
+                        <input type="number" name="birim_agirlik_kg" id="birim_agirlik_kg" class="form-control" step="0.1" min="0" value="0">
+                    </div>
+                </div>
+                <div class="form-grid-2" id="paletFields" style="display:none;">
+                    <div class="form-group">
+                        <label for="palet_adet">Palet Adedi</label>
+                        <input type="number" name="palet_adet" id="palet_adet" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="palet_agirlik_kg">Palet Ağırlığı (kg)</label>
+                        <input type="number" name="palet_agirlik_kg" id="palet_agirlik_kg" class="form-control" step="0.1" min="0" value="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="acik_kg">Açık / Ek Miktar (kg)</label>
+                    <input type="number" name="acik_kg" id="acik_kg" class="form-control" step="0.1" min="0" value="0">
                 </div>
             </div>
 
@@ -65,7 +129,7 @@
                 </select>
                 <input type="hidden" name="urun_kodu" id="urun_kodu">
                 <small id="urun_kodu_display" style="display: none; color: var(--primary-color); font-weight: 600; margin-top: 5px;"></small>
-                <small style="display: block; margin-top: 5px;"><a href="{{ url_for('tedarikci.index') }}" style="color: var(--primary-color);">Yeni Tedarikçi Ekle</a></small>
+                <small style="display: block; margin-top: 5px;"><a href="{{ url_for('tanimlar.index') }}" style="color: var(--primary-color);">Tanımları Yönet</a></small>
             </div>
             <div class="form-group">
                 <label for="irsaliye_no">İrsaliye No</label>
@@ -103,14 +167,24 @@
                     <td>
                         {% if giris.hammadde_tipi == 'PVC' %}
                             {{ giris.bigbag_adet }}× {{ giris.bigbag_tipi }} kg
+                            {% if giris.acik_kg %}+ {{ giris.acik_kg|sayi }} kg açık{% endif %}
                         {% elif giris.silo %}
                             {{ giris.silo.ad }}
+                            {% if giris.paketleme_tipi and giris.paketleme_tipi != 'dokme' %}
+                            <br><small class="text-muted">{{ giris.paketleme_tipi }}: {{ giris.paket_adet or giris.palet_adet }} adet</small>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td>
                         {{ giris.tedarikci_rel.ad if giris.tedarikci_rel else (giris.tedarikci or '-') }}
                         {% if giris.urun_kodu %}
                         <br><small class="text-muted">Kod: {{ giris.urun_kodu }}</small>
+                        {% endif %}
+                        {% if giris.uretici %}
+                        <br><small class="text-muted">Üretici: {{ giris.uretici.ad }}</small>
+                        {% endif %}
+                        {% if giris.lot_no %}
+                        <br><small class="text-muted">Lot: {{ giris.lot_no }}</small>
                         {% endif %}
                     </td>
                     <td>
@@ -135,6 +209,27 @@
 
 {% block scripts %}
 <script>
+// PVC bigbag tipi seçeneklerini dinamik doldur
+function bigbagTipleriniDoldur() {
+    const bigbagSelect = document.getElementById('bigbag_tipi');
+    bigbagSelect.innerHTML = '';
+    // hammadde_kart_map'ten veya AmbalajTipi'den bigbag tiplerini topla
+    let tipler = [];
+    const kartMap = {{ hammadde_kart_map|tojson|safe }};
+    kartMap.filter(k => k.tip === 'PVC' && k.bigbag_tipi).forEach(k => {
+        if (!tipler.includes(k.bigbag_tipi)) tipler.push(k.bigbag_tipi);
+    });
+    // Eğer hiç tip yoksa varsayılanları ekle (geriye uyumluluk için)
+    if (tipler.length === 0) tipler = [750, 1000, 1100];
+    tipler.sort((a, b) => a - b);
+    tipler.forEach(tip => {
+        const opt = document.createElement('option');
+        opt.value = tip;
+        opt.textContent = tip.toLocaleString('tr-TR') + ' kg';
+        bigbagSelect.appendChild(opt);
+    });
+}
+
 function hammaddeTipiDegisti() {
     const tip = document.getElementById('hammadde_tipi').value;
     const pvcFields = document.getElementById('pvcFields');
@@ -142,12 +237,15 @@ function hammaddeTipiDegisti() {
     const siloSelect = document.getElementById('silo_id');
 
     if (tip === 'PVC') {
+        bigbagTipleriniDoldur();
         pvcFields.style.display = 'block';
         siloFields.style.display = 'none';
+        document.getElementById('genericPackagingFields').style.display = 'none';
         bigbagHesapla();
     } else if (tip) {
         pvcFields.style.display = 'none';
         siloFields.style.display = 'block';
+        document.getElementById('genericPackagingFields').style.display = 'block';
         // Sadece uygun siloları göster
         Array.from(siloSelect.options).forEach(opt => {
             if (opt.dataset.tip) {
@@ -158,26 +256,71 @@ function hammaddeTipiDegisti() {
     } else {
         pvcFields.style.display = 'none';
         siloFields.style.display = 'none';
+        document.getElementById('genericPackagingFields').style.display = 'block';
     }
     
     // Tedarikçileri filtrele
+    const kartSelect = document.getElementById('hammadde_kart_secimi');
+    kartSelect.innerHTML = '<option value="">-- Hammadde kartı seçin --</option>';
+    if (tip) {
+        const kartMap = {{ hammadde_kart_map|tojson|safe }};
+        kartMap.filter(k => k.tip === tip).forEach((kart, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = [kart.tip, kart.kod, kart.uretici].filter(Boolean).join(' / ');
+            option.dataset.kod = kart.kod || '';
+            option.dataset.uretici = kart.uretici || '';
+            option.dataset.paketleme = kart.paketleme || '';
+            option.dataset.birimKg = kart.birim_kg || '';
+            option.dataset.bigbagTipi = kart.bigbag_tipi || '';
+            kartSelect.appendChild(option);
+        });
+    }
+
     const tedarikciSelect = document.getElementById('tedarikci_id');
     tedarikciSelect.innerHTML = '<option value="">-- Seçin --</option>';
     if (tip) {
         const tedarikciMap = {{ tedarikci_map|tojson|safe }};
         tedarikciMap.forEach(t => {
-            // Bu hammadde tipine uygun eşleşmeyi bul
-            const eslesme = t.tipler.find(h => h.tip === tip);
-            if (eslesme) {
+            t.tipler.filter(h => h.tip === tip).forEach(eslesme => {
                 const option = document.createElement('option');
                 option.value = t.id;
-                option.textContent = t.ad + (eslesme.kod ? ` (${eslesme.kod})` : '');
+                option.textContent = t.ad + [eslesme.kod, eslesme.uretici].filter(Boolean).map(v => ` (${v})`).join('');
                 option.dataset.kod = eslesme.kod || '';
+                option.dataset.uretici = eslesme.uretici || '';
+                option.dataset.paketleme = eslesme.paketleme || '';
+                option.dataset.birimKg = eslesme.birim_kg || '';
+                option.dataset.bigbagTipi = eslesme.bigbag_tipi || '';
                 tedarikciSelect.appendChild(option);
-            }
+            });
         });
     }
     tedarikciDegisti(); // Temizle
+}
+
+function tanimdanDoldur(option) {
+    if (!option) return;
+    const kod = option.dataset.kod || '';
+    const uretici = option.dataset.uretici || '';
+    if (kod) document.getElementById('urun_kodu').value = kod;
+    if (uretici) document.getElementById('uretici_ad').value = uretici;
+    if (option.dataset.paketleme) {
+        document.getElementById('paketleme_tipi').value = option.dataset.paketleme;
+        paketlemeDegisti();
+    }
+    if (option.dataset.birimKg) {
+        document.getElementById('birim_agirlik_kg').value = option.dataset.birimKg;
+    }
+    if (option.dataset.bigbagTipi) {
+        document.getElementById('bigbag_tipi').value = option.dataset.bigbagTipi;
+        bigbagHesapla();
+    }
+    urunKoduGoster();
+}
+
+function hammaddeKartiSecildi() {
+    const sel = document.getElementById('hammadde_kart_secimi');
+    tanimdanDoldur(sel.options[sel.selectedIndex]);
 }
 
 function tedarikciDegisti() {
@@ -187,8 +330,15 @@ function tedarikciDegisti() {
     
     const selectedOption = sel.options[sel.selectedIndex];
     const kod = selectedOption ? (selectedOption.dataset.kod || '') : '';
+    const uretici = selectedOption ? (selectedOption.dataset.uretici || '') : '';
     
     hidden.value = kod;
+    tanimdanDoldur(selectedOption);
+}
+
+function urunKoduGoster() {
+    const kod = document.getElementById('urun_kodu').value;
+    const display = document.getElementById('urun_kodu_display');
     if (kod) {
         display.textContent = 'Ürün Kodu: ' + kod;
         display.style.display = 'block';
@@ -197,12 +347,52 @@ function tedarikciDegisti() {
     }
 }
 
-function bigbagHesapla() {
-    const tipi = parseInt(document.getElementById('bigbag_tipi').value) || 750;
-    const adet = parseInt(document.getElementById('bigbag_adet').value) || 0;
-    document.getElementById('bigbagToplam').textContent = (tipi * adet).toLocaleString('tr-TR') + ' kg';
+function paketlemeDegisti() {
+    const tip = document.getElementById('paketleme_tipi').value;
+    document.getElementById('paketFields').style.display = ['ibc', 'varil', 'bigbag', 'torba'].includes(tip) ? 'grid' : 'none';
+    document.getElementById('paletFields').style.display = tip === 'palet' ? 'grid' : 'none';
+    hesaplaVeGuncelle();
 }
 
-document.getElementById('bigbag_tipi').addEventListener('change', bigbagHesapla);
+function hesaplaVeGuncelle() {
+    const tip = document.getElementById('hammadde_tipi').value;
+    let toplam = 0;
+
+    if (tip === 'PVC') {
+        const tipi = parseInt(document.getElementById('bigbag_tipi').value) || 0;
+        const adet = parseInt(document.getElementById('bigbag_adet').value) || 0;
+        const acik = parseFloat(document.getElementById('pvc_acik_kg').value) || 0;
+        toplam = tipi * adet + acik;
+        document.getElementById('bigbagToplam').textContent = (toplam > 0 ? toplam.toLocaleString('tr-TR') + ' kg' : '0 kg');
+    } else {
+        const pTip = document.getElementById('paketleme_tipi').value;
+        const pAdet = parseInt(document.getElementById('paket_adet').value) || 0;
+        const bKg = parseFloat(document.getElementById('birim_agirlik_kg').value) || 0;
+        const acik = parseFloat(document.getElementById('acik_kg').value) || 0;
+        const palAdet = parseInt(document.getElementById('palet_adet').value) || 0;
+        const palKg = parseFloat(document.getElementById('palet_agirlik_kg').value) || 0;
+
+        if (pTip === 'palet') {
+            toplam = palAdet * palKg + acik;
+        } else if (['ibc', 'varil', 'bigbag', 'torba'].includes(pTip)) {
+            toplam = pAdet * bKg + acik;
+        }
+    }
+
+    if (toplam > 0) {
+        document.getElementById('miktar_kg').value = toplam;
+    }
+}
+
+// Event listener'ları güncelle
+document.addEventListener('DOMContentLoaded', function() {
+    ['paket_adet', 'birim_agirlik_kg', 'acik_kg', 'palet_adet', 'palet_agirlik_kg', 'bigbag_tipi', 'bigbag_adet', 'pvc_acik_kg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', hesaplaVeGuncelle);
+    });
+    // İlk değerleri hesapla ve görünümleri ayarla
+    paketlemeDegisti();
+    hesaplaVeGuncelle();
+});
 </script>
 {% endblock %}

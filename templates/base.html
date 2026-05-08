@@ -27,13 +27,13 @@
                 <span class="nav-icon">📊</span>
                 <span class="nav-label">Dashboard</span>
             </a>
+            <a href="{{ url_for('tanimlar.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('tanimlar') %}active{% endif %}">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-label">Tanımlar</span>
+            </a>
             <a href="{{ url_for('hammadde.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('hammadde') %}active{% endif %}">
                 <span class="nav-icon">📥</span>
                 <span class="nav-label">Hammadde Giriş</span>
-            </a>
-            <a href="{{ url_for('tedarikci.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('tedarikci') %}active{% endif %}">
-                <span class="nav-icon">🏢</span>
-                <span class="nav-label">Tedarikçiler</span>
             </a>
             <a href="{{ url_for('formul.index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('formul') %}active{% endif %}">
                 <span class="nav-icon">📋</span>

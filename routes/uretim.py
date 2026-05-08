@@ -4,6 +4,7 @@
 from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db, Silo, PvcStok, Formul, Parti, Ayar
+from services.stok import lotlardan_tuket, toplam_lot_stok, parse_int
 
 uretim_bp = Blueprint('uretim', __name__)
 
@@ -11,7 +12,7 @@ uretim_bp = Blueprint('uretim', __name__)
 def stok_kontrol(formul, parti_sayisi=1):
     """Formül için yeterli stok var mı kontrol eder. Eksikleri döndürür."""
     eksikler = []
-    pvc_toplam = sum(s.toplam_kg for s in PvcStok.query.all())
+    pvc_toplam = max(sum(s.toplam_kg for s in PvcStok.query.all()), toplam_lot_stok('PVC'))
     gerekli_pvc = formul.pvc_kg * parti_sayisi
     if gerekli_pvc > pvc_toplam:
         eksikler.append(f'PVC: Gerekli {gerekli_pvc} kg, Mevcut {pvc_toplam} kg')
@@ -48,7 +49,8 @@ def stok_kontrol(formul, parti_sayisi=1):
 
     if formul.kirma_sure_sn > 0:
         kirma_tank = Silo.query.filter_by(hammadde_tipi='Kırma').first()
-        kirma_hiz = float(Ayar.query.filter_by(anahtar='kirma_akis_hizi').first().deger or 0.1)
+        kirma_ayar = Ayar.query.filter_by(anahtar='kirma_akis_hizi').first()
+        kirma_hiz = float((kirma_ayar.deger if kirma_ayar else None) or 0.1)
         gerekli_kirma = formul.kirma_sure_sn * kirma_hiz * parti_sayisi
         if kirma_tank and gerekli_kirma > kirma_tank.mevcut_kg:
             eksikler.append(f'Kırma: Gerekli {gerekli_kirma:.1f} kg ({formul.kirma_sure_sn}sn), Mevcut {kirma_tank.mevcut_kg} kg')
@@ -58,22 +60,22 @@ def stok_kontrol(formul, parti_sayisi=1):
 
 def stok_dus(formul):
     """Bir parti için stoktan düşüm yapar."""
-    # PVC düşümü — en büyük bigbag'den başlayarak FIFO
+    # PVC düşümü kg bazlıdır; bigbag adedi sadece sayım kolaylığı için güncellenir.
     kalan_pvc = formul.pvc_kg
     for pvc in PvcStok.query.order_by(PvcStok.bigbag_tipi.desc()).all():
         if kalan_pvc <= 0:
             break
-        if pvc.adet <= 0:
+        mevcut = pvc.toplam_kg
+        if mevcut <= 0:
             continue
-        # Bu tipten kaç bigbag gerekiyor?
-        while pvc.adet > 0 and kalan_pvc > 0:
-            kalan_pvc -= pvc.bigbag_tipi
-            if kalan_pvc >= 0:
-                pvc.adet -= 1
-            else:
-                # Kısmi kullanım — bigbag sayısı düşmez, kalan negatif = artık PVC
-                break
+        dusulecek = min(kalan_pvc, mevcut)
+        yeni_kg = mevcut - dusulecek
+        pvc.mevcut_kg = yeni_kg
+        pvc.adet = int(yeni_kg // pvc.bigbag_tipi)
+        pvc.acik_kg = yeni_kg - (pvc.adet * pvc.bigbag_tipi)
+        kalan_pvc -= dusulecek
         pvc.updated_at = datetime.utcnow()
+    lotlardan_tuket('PVC', formul.pvc_kg)
 
     # Silo/tank düşümleri
     hammadde_map = {
@@ -93,6 +95,7 @@ def stok_dus(formul):
             silo.mevcut_kg -= dusulecek
             silo.updated_at = datetime.utcnow()
             kalan -= dusulecek
+        lotlardan_tuket(tip, miktar)
 
     # Ekstra bileşenlerden düşüm
     if formul.ekstra_bilesenler:
@@ -109,6 +112,7 @@ def stok_dus(formul):
                 silo.mevcut_kg -= dusulecek
                 silo.updated_at = datetime.utcnow()
                 kalan -= dusulecek
+            lotlardan_tuket(tip, miktar)
 
     # Pellet tankından düşüm
     if formul.pellet_kg > 0:
@@ -116,16 +120,19 @@ def stok_dus(formul):
         if pellet_tank:
             pellet_tank.mevcut_kg = max(0, pellet_tank.mevcut_kg - formul.pellet_kg)
             pellet_tank.updated_at = datetime.utcnow()
+        lotlardan_tuket('Pellet', formul.pellet_kg)
 
     # Kırma tankından düşüm (süre × akış hızı = kg)
     kirma_tuketim_kg = 0
     if formul.kirma_sure_sn > 0:
-        kirma_hiz = float(Ayar.query.filter_by(anahtar='kirma_akis_hizi').first().deger or 0.1)
+        kirma_ayar = Ayar.query.filter_by(anahtar='kirma_akis_hizi').first()
+        kirma_hiz = float((kirma_ayar.deger if kirma_ayar else None) or 0.1)
         kirma_tuketim_kg = formul.kirma_sure_sn * kirma_hiz
         kirma_tank = Silo.query.filter_by(hammadde_tipi='Kırma').first()
         if kirma_tank:
             kirma_tank.mevcut_kg = max(0, kirma_tank.mevcut_kg - kirma_tuketim_kg)
             kirma_tank.updated_at = datetime.utcnow()
+        lotlardan_tuket('Kırma', kirma_tuketim_kg)
 
     return kirma_tuketim_kg
 
@@ -142,7 +149,10 @@ def index():
 def parti_uret():
     """Parti üretimi — stok kontrol + düşüm + kayıt."""
     formul_id = request.form.get('formul_id')
-    parti_sayisi = int(request.form.get('parti_sayisi', 1) or 1)
+    parti_sayisi = parse_int(request.form.get('parti_sayisi'), 1)
+    if parti_sayisi <= 0:
+        flash('Parti sayısı 0\'dan büyük olmalıdır.', 'error')
+        return redirect(url_for('uretim.index'))
 
     if not formul_id:
         flash('Lütfen bir formül seçin.', 'error')
@@ -200,5 +210,6 @@ def formul_detay(formul_id):
         'slip_kg': formul.slip_kg,
         'pellet_kg': formul.pellet_kg,
         'kirma_sure_sn': formul.kirma_sure_sn,
+        'ekstra_bilesenler': formul.ekstra_bilesenler or {},
         'toplam_kg': formul.toplam_hammadde_kg
     })

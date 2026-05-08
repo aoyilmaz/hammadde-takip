@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% block title %}Tanımlar{% endblock %}
+{% block page_title %}Tanımlar{% endblock %}
+
+{% block content %}
+<div class="definition-layout">
+    <!-- Hammadde Tipi Yönetimi -->
+    <section class="form-card">
+        <h3 class="card-title">Hammadde Tipi Ekle / Düzenle</h3>
+        <form action="{{ url_for('tanimlar.hammadde_tipi_kaydet') }}" method="POST">
+            <input type="hidden" name="tipi_id" id="tipi_id">
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="tipi_ad">Tipi Adı</label>
+                    <input type="text" name="ad" id="tipi_ad" class="form-control" required placeholder="PVC, DOTP, Antifog...">
+                </div>
+                <div class="form-group">
+                    <label for="tipi_aciklama">Açıklama</label>
+                    <input type="text" name="aciklama" id="tipi_aciklama" class="form-control" placeholder="Örn: Plastisizer, Ester plasticizer...">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="tipi_submit">Hammadde Tipini Kaydet</button>
+            <button type="button" class="btn btn-secondary" id="tipi_cancel" style="display:none;" onclick="tipiFormTemizle()">İptal</button>
+        </form>
+    </section>
+
+    <!-- Hammadde Kartı -->
+    <section class="form-card">
+        <h3 class="card-title">Hammadde Kartı</h3>
+        <form action="{{ url_for('tanimlar.hammadde_kaydet') }}" method="POST">
+            <input type="hidden" name="kart_id" id="hm_kart_id">
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label for="hm_tipi">Hammadde Tipi</label>
+                    <select name="hammadde_tipi" id="hm_tipi" class="form-control" required>
+                        <option value="">-- Seçin --</option>
+                        {% for tipi in hammadde_tipleri_kayitlari %}
+                        <option value="{{ tipi.ad }}">{{ tipi.ad }}</option>
+                        {% endfor %}
+                    </select>
+                    <small style="display: block; margin-top: 5px;"><a href="#tipi_ad" style="color: var(--accent);">✚ Yeni Tipi Ekle</a></small>
+                </div>
+                <div class="form-group">
+                    <label for="hm_kodu">Hammadde Kodu</label>
+                    <input type="text" name="hammadde_kodu" id="hm_kodu" class="form-control" placeholder="K67, K58, vb.">
+                </div>
+                <div class="form-group">
+                    <label for="hm_uretici">Üretici</label>
+                    <input type="text" name="uretici_ad" id="hm_uretici" class="form-control" placeholder="Üretici firma">
+                </div>
+                <div class="form-group">
+                    <label for="hm_paketleme">Varsayılan Paketleme</label>
+                    <select name="paketleme_tipi" id="hm_paketleme" class="form-control">
+                        <option value="dokme">Dökme / Tanker</option>
+                        <option value="bigbag">Bigbag</option>
+                        <option value="torba">Torba</option>
+                        <option value="palet">Torbalı Palet</option>
+                        <option value="ibc">IBC</option>
+                        <option value="varil">Varil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="hm_birim_kg">Birim Ağırlık (kg)</label>
+                    <input type="number" name="birim_agirlik_kg" id="hm_birim_kg" class="form-control" step="0.1" min="0" placeholder="Örn: 1000">
+                </div>
+                <div class="form-group">
+                    <label for="hm_bigbag">Bigbag Büyüklüğü (kg)</label>
+                    <input type="number" name="bigbag_tipi" id="hm_bigbag" class="form-control" min="0" placeholder="750, 950, 1000, 1100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="hm_notlar">Notlar</label>
+                <textarea name="notlar" id="hm_notlar" class="form-control" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="hm_submit">Hammadde Kartını Kaydet</button>
+            <button type="button" class="btn btn-secondary" id="hm_cancel" style="display:none;" onclick="hammaddeFormTemizle()">İptal</button>
+        </form>
+    </section>
+
+    <section class="form-card">
+        <h3 class="card-title">Tedarikçi / İthalatçı Tanımla</h3>
+        <form action="{{ url_for('tanimlar.tedarikci_kaydet') }}" method="POST">
+            <input type="hidden" name="tedarikci_id" id="tedarikci_id">
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label for="ted_ad">Firma Adı</label>
+                    <input type="text" name="ad" id="ted_ad" class="form-control" required placeholder="Firma adı">
+                </div>
+                <div class="form-group">
+                    <label for="ted_kisi">İletişim Kişisi</label>
+                    <input type="text" name="iletisim_kisi" id="ted_kisi" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="ted_tel">Telefon</label>
+                    <input type="text" name="telefon" id="ted_tel" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="ted_eposta">E-posta</label>
+                    <input type="email" name="eposta" id="ted_eposta" class="form-control">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="ted_notlar">Genel Notlar</label>
+                <textarea name="notlar" id="ted_notlar" class="form-control" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="ted_submit">Tedarikçi Bilgilerini Kaydet</button>
+            <button type="button" class="btn btn-secondary" id="ted_cancel" style="display:none;" onclick="tedarikciFormTemizle()">İptal</button>
+        </form>
+    </section>
+
+    <section class="form-card" id="match-section">
+        <h3 class="card-title">Tedarikçi - Hammadde Eşleşmesi</h3>
+        <form action="{{ url_for('tanimlar.tedarikci_kaydet') }}" method="POST">
+            <input type="hidden" name="eslesme_id" id="eslesme_id">
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label for="match_ted_id">Tedarikçi Seçin</label>
+                    <select name="tedarikci_id" id="match_ted_id" class="form-control" required>
+                        <option value="">-- Tedarikçi Seçin --</option>
+                        {% for t in tedarikciler %}
+                        <option value="{{ t.id }}">{{ t.ad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ted_hm_tipi">Sağladığı Hammadde</label>
+                    <select name="hammadde_tipi" id="ted_hm_tipi" class="form-control" required>
+                        <option value="">-- Seçin --</option>
+                        {% for tipi in hammadde_tipleri_kayitlari %}
+                        <option value="{{ tipi.ad }}">{{ tipi.ad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ted_kod">Ürün Kodu (Tedarikçi)</label>
+                    <input type="text" name="urun_kodu" id="ted_kod" class="form-control" placeholder="K67, DOTP-L vb.">
+                </div>
+                <div class="form-group">
+                    <label for="ted_uretici">Gerçek Üretici</label>
+                    <input type="text" name="uretici_ad" id="ted_uretici" class="form-control" placeholder="Üretici firma">
+                </div>
+                <div class="form-group">
+                    <label for="ted_paketleme">Paketleme</label>
+                    <select name="paketleme_tipi" id="ted_paketleme" class="form-control">
+                        <option value="dokme">Dökme / Tanker</option>
+                        <option value="bigbag">Bigbag</option>
+                        <option value="torba">Torba</option>
+                        <option value="palet">Torbalı Palet</option>
+                        <option value="ibc">IBC</option>
+                        <option value="varil">Varil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ted_birim_kg">Birim Ağırlık (kg)</label>
+                    <input type="number" name="birim_agirlik_kg" id="ted_birim_kg" class="form-control" step="0.1" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="ted_bigbag">Bigbag Büyüklüğü (kg)</label>
+                    <input type="number" name="bigbag_tipi" id="ted_bigbag" class="form-control" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="eslesme_notlar">Eşleşme Notları</label>
+                <textarea name="eslesme_notlar" id="eslesme_notlar" class="form-control" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary" id="match_submit">Eşleşmeyi Kaydet</button>
+            <button type="button" class="btn btn-secondary" id="match_cancel" style="display:none;" onclick="matchFormTemizle()">İptal</button>
+        </form>
+    </section>
+
+    <section class="form-card">
+        <h3 class="card-title">Silo / Tank / Depo Tanımı</h3>
+        <form action="{{ url_for('tanimlar.silo_kaydet') }}" method="POST">
+            <input type="hidden" name="silo_id" id="silo_id">
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="silo_ad">Ad</label>
+                    <input type="text" name="silo_ad" id="silo_ad" class="form-control" required placeholder="DOTP Silo 1">
+                </div>
+                <div class="form-group">
+                    <label for="silo_hammadde_tipi">Hammadde Tipi</label>
+                    <select name="silo_hammadde_tipi" id="silo_hammadde_tipi" class="form-control" required>
+                        <option value="">-- Seçin --</option>
+                        {% for tipi in hammadde_tipleri_kayitlari %}
+                        <option value="{{ tipi.ad }}">{{ tipi.ad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="silo_tipi">Depolama Tipi</label>
+                    <select name="silo_tipi" id="silo_tipi" class="form-control">
+                        <option value="silo">Silo</option>
+                        <option value="tank">Tank</option>
+                        <option value="depo">Depo</option>
+                        <option value="geri_donus">Geri Dönüşüm</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="kapasite_kg">Kapasite (kg)</label>
+                    <input type="number" name="kapasite_kg" id="kapasite_kg" class="form-control" required min="1">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-secondary" id="silo_submit">Depolama Alanı Ekle</button>
+            <button type="button" class="btn btn-secondary" id="silo_cancel" style="display:none;" onclick="siloFormTemizle()">İptal</button>
+        </form>
+    </section>
+</div>
+
+<div class="section-header">
+    <h2>Hammadde Tipleri</h2>
+</div>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Adı</th>
+                    <th>Açıklama</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if hammadde_tipleri_kayitlari %}
+                {% for tipi in hammadde_tipleri_kayitlari %}
+                <tr>
+                    <td><strong>{{ tipi.ad }}</strong></td>
+                    <td><small>{{ tipi.aciklama or '-' }}</small></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick='tipiDuzenle({{ tipi.id }}, {{ tipi.ad|tojson }}, {{ (tipi.aciklama or "")|tojson }})'>Düzenle</button>
+                        <form action="{{ url_for('tanimlar.hammadde_tipi_sil', tipi_id=tipi.id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bu hammadde tipini pasife almak istiyor musunuz?')">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="3" style="text-align:center;">Henüz hammadde tipi kaydı yok.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section-header">
+    <h2>Hammadde Kartları</h2>
+</div>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tip</th>
+                    <th>Kod</th>
+                    <th>Üretici</th>
+                    <th>Paketleme</th>
+                    <th>Birim / Bigbag</th>
+                    <th>Notlar</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kart in hammadde_kartlari %}
+                <tr>
+                    <td><span class="badge badge-{{ kart.hammadde_tipi|lower }}">{{ kart.hammadde_tipi }}</span></td>
+                    <td><strong>{{ kart.hammadde_kodu }}</strong></td>
+                    <td>{{ kart.uretici.ad if kart.uretici else '-' }}</td>
+                    <td>{{ kart.paketleme_tipi or '-' }}</td>
+                    <td>
+                        {% if kart.bigbag_tipi %}{{ kart.bigbag_tipi }} kg bigbag{% elif kart.birim_agirlik_kg %}{{ kart.birim_agirlik_kg|sayi }} kg{% else %}-{% endif %}
+                    </td>
+                    <td><small>{{ kart.notlar or '-' }}</small></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick='hammaddeDuzenle({{ kart.id }}, {{ kart.hammadde_tipi|tojson }}, {{ kart.hammadde_kodu|tojson }}, {{ (kart.uretici.ad if kart.uretici else "")|tojson }}, {{ (kart.paketleme_tipi or "dokme")|tojson }}, {{ kart.birim_agirlik_kg or 0 }}, {{ kart.bigbag_tipi or 0 }}, {{ (kart.notlar or "")|tojson }})'>Düzenle</button>
+                        <form action="{{ url_for('tanimlar.hammadde_sil', kart_id=kart.id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Hammadde kartını pasife almak istiyor musunuz?')">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center;">Henüz hammadde kartı yok.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section-header">
+    <h2>Tedarikçiler</h2>
+</div>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tedarikçi / İthalatçı</th>
+                    <th>Sağladığı Hammaddeler</th>
+                    <th>İletişim</th>
+                    <th>Notlar</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tedarikciler %}
+                <tr>
+                    <td><strong>{{ t.ad }}</strong></td>
+                    <td>
+                        {% for h in t.hammadde_tipleri %}
+                        <div class="definition-pill">
+                            <strong>{{ h.hammadde_tipi }}</strong>
+                            {% if h.urun_kodu %}<span>{{ h.urun_kodu }}</span>{% endif %}
+                            {% if h.uretici %}<span>{{ h.uretici.ad }}</span>{% endif %}
+                            {% if h.bigbag_tipi %}<span>{{ h.bigbag_tipi }} kg bigbag</span>{% elif h.birim_agirlik_kg %}<span>{{ h.birim_agirlik_kg|sayi }} kg</span>{% endif %}
+                            <button type="button" class="link-button"
+                                    onclick='matchDuzenle({{ t.id }}, {{ h.id }}, {{ h.hammadde_tipi|tojson }}, {{ (h.urun_kodu or "")|tojson }}, {{ (h.uretici.ad if h.uretici else "")|tojson }}, {{ (h.paketleme_tipi or "dokme")|tojson }}, {{ h.birim_agirlik_kg or 0 }}, {{ h.bigbag_tipi or 0 }}, {{ (h.notlar or "")|tojson }})'>Düzenle</button>
+                            <form action="{{ url_for('tanimlar.eslesme_sil', eslesme_id=h.id) }}" method="POST" class="inline-form">
+                                <button type="submit" class="link-button" onclick="return confirm('Bu eşleşmeyi silmek istiyor musunuz?')">Sil</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        -
+                        {% endfor %}
+                    </td>
+                    <td>{{ t.iletisim_kisi or '-' }}<br><small>{{ t.telefon or '' }}</small><br><small>{{ t.eposta or '' }}</small></td>
+                    <td><small>{{ t.notlar or '-' }}</small></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick='tedarikciDuzenle({{ t.id }}, {{ t.ad|tojson }}, {{ (t.iletisim_kisi or "")|tojson }}, {{ (t.telefon or "")|tojson }}, {{ (t.eposta or "")|tojson }}, {{ (t.notlar or "")|tojson }})'>Düzenle</button>
+                        <form action="{{ url_for('tanimlar.tedarikci_sil', tedarikci_id=t.id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tedarikçiyi pasife almak istiyor musunuz?')">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align:center;">Kayıtlı tedarikçi yok.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section-header">
+    <h2>Silo / Tank / Depo Tanımları</h2>
+</div>
+<div class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Hammadde</th>
+                    <th>Tip</th>
+                    <th>Kapasite</th>
+                    <th>Mevcut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for silo in silolar %}
+                <tr>
+                    <td><strong>{{ silo.ad }}</strong></td>
+                    <td>{{ silo.hammadde_tipi }}</td>
+                    <td>{{ silo.silo_tipi }}</td>
+                    <td>{{ silo.kapasite_kg|sayi }} kg</td>
+                    <td>{{ silo.mevcut_kg|sayi }} kg</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                onclick='siloDuzenle({{ silo.id }}, {{ silo.ad|tojson }}, {{ silo.hammadde_tipi|tojson }}, {{ silo.silo_tipi|tojson }}, {{ silo.kapasite_kg or 0 }})'>Düzenle</button>
+                        <form action="{{ url_for('tanimlar.silo_sil', silo_id=silo.id) }}" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Depolama alanını pasife almak istiyor musunuz?')">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+function tipiDuzenle(id, ad, aciklama) {
+    document.getElementById('tipi_id').value = id;
+    document.getElementById('tipi_ad').value = ad || '';
+    document.getElementById('tipi_aciklama').value = aciklama || '';
+    document.getElementById('tipi_submit').textContent = 'Hammadde Tipini Güncelle';
+    document.getElementById('tipi_cancel').style.display = 'inline-flex';
+    document.getElementById('tipi_ad').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function tipiFormTemizle() {
+    document.getElementById('tipi_id').value = '';
+    document.getElementById('tipi_ad').value = '';
+    document.getElementById('tipi_aciklama').value = '';
+    document.getElementById('tipi_submit').textContent = 'Hammadde Tipini Kaydet';
+    document.getElementById('tipi_cancel').style.display = 'none';
+}
+
+function hammaddeDuzenle(id, tip, kod, uretici, paketleme, birimKg, bigbagTipi, notlar) {
+    document.getElementById('hm_kart_id').value = id;
+    document.getElementById('hm_tipi').value = tip;
+    document.getElementById('hm_kodu').value = kod || '';
+    document.getElementById('hm_uretici').value = uretici || '';
+    document.getElementById('hm_paketleme').value = paketleme || 'dokme';
+    document.getElementById('hm_birim_kg').value = birimKg || '';
+    document.getElementById('hm_bigbag').value = bigbagTipi || '';
+    document.getElementById('hm_notlar').value = notlar || '';
+    document.getElementById('hm_submit').textContent = 'Hammadde Kartını Güncelle';
+    document.getElementById('hm_cancel').style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hammaddeFormTemizle() {
+    ['hm_kart_id', 'hm_tipi', 'hm_kodu', 'hm_uretici', 'hm_birim_kg', 'hm_bigbag', 'hm_notlar'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('hm_paketleme').value = 'dokme';
+    document.getElementById('hm_submit').textContent = 'Hammadde Kartını Kaydet';
+    document.getElementById('hm_cancel').style.display = 'none';
+}
+
+function tedarikciDuzenle(tedarikciId, ad, kisi, telefon, eposta, notlar) {
+    document.getElementById('tedarikci_id').value = tedarikciId || '';
+    document.getElementById('ted_ad').value = ad || '';
+    document.getElementById('ted_kisi').value = kisi || '';
+    document.getElementById('ted_tel').value = telefon || '';
+    document.getElementById('ted_eposta').value = eposta || '';
+    document.getElementById('ted_notlar').value = notlar || '';
+    document.getElementById('ted_submit').textContent = 'Tedarikçi Bilgilerini Güncelle';
+    document.getElementById('ted_cancel').style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function tedarikciFormTemizle() {
+    ['tedarikci_id', 'ted_ad', 'ted_kisi', 'ted_tel', 'ted_eposta', 'ted_notlar'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ted_submit').textContent = 'Tedarikçi Bilgilerini Kaydet';
+    document.getElementById('ted_cancel').style.display = 'none';
+}
+
+function matchDuzenle(tedarikciId, eslesmeId, tip, kod, uretici, paketleme, birimKg, bigbagTipi, eslesmeNotlar) {
+    document.getElementById('match_ted_id').value = tedarikciId || '';
+    document.getElementById('eslesme_id').value = eslesmeId || '';
+    document.getElementById('ted_hm_tipi').value = tip || '';
+    document.getElementById('ted_kod').value = kod || '';
+    document.getElementById('ted_uretici').value = uretici || '';
+    document.getElementById('ted_paketleme').value = paketleme || 'dokme';
+    document.getElementById('ted_birim_kg').value = birimKg || '';
+    document.getElementById('ted_bigbag').value = bigbagTipi || '';
+    document.getElementById('eslesme_notlar').value = eslesmeNotlar || '';
+    document.getElementById('match_submit').textContent = 'Eşleşmeyi Güncelle';
+    document.getElementById('match_cancel').style.display = 'inline-flex';
+    document.getElementById('match-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function matchFormTemizle() {
+    ['eslesme_id', 'match_ted_id', 'ted_hm_tipi', 'ted_kod', 'ted_uretici', 'ted_birim_kg', 'ted_bigbag', 'eslesme_notlar'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ted_paketleme').value = 'dokme';
+    document.getElementById('match_submit').textContent = 'Eşleşmeyi Kaydet';
+    document.getElementById('match_cancel').style.display = 'none';
+}
+
+function siloDuzenle(id, ad, hammaddeTipi, siloTipi, kapasiteKg) {
+    document.getElementById('silo_id').value = id;
+    document.getElementById('silo_ad').value = ad;
+    document.getElementById('silo_hammadde_tipi').value = hammaddeTipi;
+    document.getElementById('silo_tipi').value = siloTipi;
+    document.getElementById('kapasite_kg').value = kapasiteKg;
+    document.getElementById('silo_submit').textContent = 'Depolama Alanını Güncelle';
+    document.getElementById('silo_cancel').style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function siloFormTemizle() {
+    ['silo_id', 'silo_ad', 'silo_hammadde_tipi', 'kapasite_kg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('silo_tipi').value = 'silo';
+    document.getElementById('silo_submit').textContent = 'Depolama Alanı Ekle';
+    document.getElementById('silo_cancel').style.display = 'none';
+}
+</script>
+{% endblock %}

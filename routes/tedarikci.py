@@ -6,14 +6,8 @@ tedarikci_bp = Blueprint('tedarikci', __name__)
 
 @tedarikci_bp.route('/')
 def index():
-    """Tedarikçi listesi ve ekleme formu."""
-    tedarikciler = Tedarikci.query.filter_by(aktif=True).order_by(Tedarikci.ad).all()
-    
-    # Mevcut hammadde tipleri (Silo'daki tiplere göre + PVC)
-    silolar = db.session.query(Silo.hammadde_tipi).distinct().all()
-    hammadde_tipleri = sorted(list(set([s[0] for s in silolar] + ['PVC'])))
-    
-    return render_template('tedarikci.html', tedarikciler=tedarikciler, hammadde_tipleri=hammadde_tipleri)
+    """Eski tedarikçi menüsü artık Tanımlar altında."""
+    return redirect(url_for('tanimlar.index'))
 
 @tedarikci_bp.route('/ekle', methods=['POST'])
 def ekle():

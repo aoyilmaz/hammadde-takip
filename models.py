@@ -8,6 +8,21 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+class HammaddeTipi(db.Model):
+    """Hammadde tipleri - merkez yönetimi."""
+    __tablename__ = 'hammadde_tipleri'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(100), unique=True, nullable=False)
+    aciklama = db.Column(db.Text)
+    aktif = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<HammaddeTipi {self.ad}>'
+
+
 class Ayar(db.Model):
     """Sistem ayarları (anahtar-değer çiftleri)."""
     __tablename__ = 'ayarlar'
@@ -32,6 +47,7 @@ class Silo(db.Model):
     kapasite_kg = db.Column(db.Float, nullable=False)
     mevcut_kg = db.Column(db.Float, default=0.0)
     silo_tipi = db.Column(db.String(20), default='silo')  # silo, tank, geri_donus
+    aktif = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -60,22 +76,30 @@ class Silo(db.Model):
 
 
 class PvcStok(db.Model):
-    """PVC bigbag stok takibi — her bigbag tipi ve ürün kodu için bir kayıt."""
+    """PVC ambalaj stok takibi — kg ana stok, adet sayım kolaylığı içindir."""
     __tablename__ = 'pvc_stok'
 
     id = db.Column(db.Integer, primary_key=True)
     bigbag_tipi = db.Column(db.Integer, nullable=False)  # 750, 1000, 1100 (kg)
     urun_kodu = db.Column(db.String(100), default='Standart') # Ürün kodu ayrımı
     adet = db.Column(db.Integer, default=0)
+    mevcut_kg = db.Column(db.Float, nullable=True)
+    acik_kg = db.Column(db.Float, default=0.0)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @property
     def toplam_kg(self):
-        """Bu tipteki bigbag'lerin toplam kg'ını hesaplar."""
+        """Gerçek PVC stoku kg bazlıdır; eski kayıtlarda adetten hesaplanır."""
+        if self.mevcut_kg is not None:
+            return self.mevcut_kg
+        return self.bigbag_tipi * self.adet
+
+    @property
+    def tam_bigbag_kg(self):
         return self.bigbag_tipi * self.adet
 
     def __repr__(self):
-        return f'<PvcStok {self.bigbag_tipi}kg x{self.adet}>'
+        return f'<PvcStok {self.urun_kodu} {self.toplam_kg}kg>'
 
     @staticmethod
     def toplam_pvc_kg():
@@ -107,6 +131,79 @@ class Tedarikci(db.Model):
         return f'<Tedarikci {self.ad}>'
 
 
+class Uretici(db.Model):
+    """Malzemenin gerçek üreticisi. Tedarikçi, bize satan firmadır."""
+    __tablename__ = 'ureticiler'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(200), unique=True, nullable=False)
+    notlar = db.Column(db.Text)
+    aktif = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Uretici {self.ad}>'
+
+
+class HammaddeKart(db.Model):
+    """Hammadde/katkı ana kartı: tip, kod ve üretici bilgisini birleştirir."""
+    __tablename__ = 'hammadde_kartlari'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hammadde_tipi = db.Column(db.String(50), nullable=False)
+    hammadde_kodu = db.Column(db.String(100), default='Standart')
+    uretici_id = db.Column(db.Integer, db.ForeignKey('ureticiler.id'), nullable=True)
+    paketleme_tipi = db.Column(db.String(30), default='dokme')
+    birim_agirlik_kg = db.Column(db.Float, default=0.0)
+    bigbag_tipi = db.Column(db.Integer, nullable=True)
+    birim = db.Column(db.String(20), default='kg')
+    notlar = db.Column(db.Text)
+    aktif = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    uretici = db.relationship('Uretici', backref='hammadde_kartlari')
+
+    @property
+    def stok_kg(self):
+        return sum(lot.mevcut_kg for lot in self.lotlar)
+
+    @property
+    def etiket(self):
+        parcalar = [self.hammadde_tipi]
+        if self.hammadde_kodu:
+            parcalar.append(self.hammadde_kodu)
+        if self.uretici:
+            parcalar.append(self.uretici.ad)
+        return ' / '.join(parcalar)
+
+    def __repr__(self):
+        return f'<HammaddeKart {self.etiket}>'
+
+
+class AmbalajTipi(db.Model):
+    """Sayım/giriş kolaylığı için genel ambalaj tanımı."""
+    __tablename__ = 'ambalaj_tipleri'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(100), nullable=False)
+    ambalaj_turu = db.Column(db.String(30), nullable=False)  # dokme, tanker, ibc, varil, torba, bigbag, palet
+    birim_agirlik_kg = db.Column(db.Float, default=0.0)
+    torba_agirlik_kg = db.Column(db.Float, default=0.0)
+    torba_adet = db.Column(db.Integer, default=0)
+    aktif = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def palet_agirlik_kg(self):
+        if self.ambalaj_turu == 'palet' and self.torba_agirlik_kg and self.torba_adet:
+            return self.torba_agirlik_kg * self.torba_adet
+        return self.birim_agirlik_kg
+
+    def __repr__(self):
+        return f'<AmbalajTipi {self.ad}>'
+
+
 class TedarikciHammadde(db.Model):
     """Tedarikçilerin hangi hammaddeleri sattığını tutan eşleştirme."""
     __tablename__ = 'tedarikci_hammadde'
@@ -115,8 +212,14 @@ class TedarikciHammadde(db.Model):
     tedarikci_id = db.Column(db.Integer, db.ForeignKey('tedarikciler.id', ondelete='CASCADE'), nullable=False)
     hammadde_tipi = db.Column(db.String(50), nullable=False)
     urun_kodu = db.Column(db.String(100), nullable=True)  # Tedarikçinin bu hammadde için kullandığı ürün kodu
+    uretici_id = db.Column(db.Integer, db.ForeignKey('ureticiler.id'), nullable=True)
+    paketleme_tipi = db.Column(db.String(30), default='dokme')
+    birim_agirlik_kg = db.Column(db.Float, default=0.0)
+    bigbag_tipi = db.Column(db.Integer, nullable=True)
+    notlar = db.Column(db.Text)
     
     tedarikci = db.relationship('Tedarikci', backref=db.backref('hammadde_tipleri', cascade='all, delete-orphan'))
+    uretici = db.relationship('Uretici', backref='tedarikci_eslesmeleri')
 
 
 
@@ -132,8 +235,16 @@ class HammaddeGiris(db.Model):
     bigbag_adet = db.Column(db.Integer, nullable=True)  # Sadece PVC için
     tedarikci = db.Column(db.String(200)) # Geriye dönük uyumluluk için eski metin alanı
     tedarikci_id = db.Column(db.Integer, db.ForeignKey('tedarikciler.id'), nullable=True)
+    uretici_id = db.Column(db.Integer, db.ForeignKey('ureticiler.id'), nullable=True)
     irsaliye_no = db.Column(db.String(100))
     urun_kodu = db.Column(db.String(100)) # Snapshot of product code from supplier
+    lot_no = db.Column(db.String(100))
+    paketleme_tipi = db.Column(db.String(30))
+    paket_adet = db.Column(db.Integer, default=0)
+    birim_agirlik_kg = db.Column(db.Float, default=0.0)
+    acik_kg = db.Column(db.Float, default=0.0)
+    palet_adet = db.Column(db.Integer, default=0)
+    palet_agirlik_kg = db.Column(db.Float, default=0.0)
     tarih = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     notlar = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -141,6 +252,7 @@ class HammaddeGiris(db.Model):
     # İlişkiler
     silo = db.relationship('Silo', backref='girisler')
     tedarikci_rel = db.relationship('Tedarikci', backref='giris_kayitlari')
+    uretici = db.relationship('Uretici', backref='giris_kayitlari')
 
     def __repr__(self):
         return f'<HammaddeGiris {self.hammadde_tipi} {self.miktar_kg}kg>'
@@ -257,6 +369,73 @@ class GeriDonusBigbagStok(db.Model):
         return f'<GeriDonusBigbag {self.agirlik_kg}kg x{self.adet}>'
 
 
+class StokLot(db.Model):
+    """Lot bazlı gerçek stok. Asıl miktar her zaman kg olarak tutulur."""
+    __tablename__ = 'stok_lotlari'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hammadde_kart_id = db.Column(db.Integer, db.ForeignKey('hammadde_kartlari.id'), nullable=False)
+    tedarikci_id = db.Column(db.Integer, db.ForeignKey('tedarikciler.id'), nullable=True)
+    uretici_id = db.Column(db.Integer, db.ForeignKey('ureticiler.id'), nullable=True)
+    silo_id = db.Column(db.Integer, db.ForeignKey('silolar.id'), nullable=True)
+    hammadde_giris_id = db.Column(db.Integer, db.ForeignKey('hammadde_giris.id'), nullable=True)
+    lot_no = db.Column(db.String(100))
+    ambalaj_tipi = db.Column(db.String(30), default='dokme')
+    paket_adet = db.Column(db.Integer, default=0)
+    birim_agirlik_kg = db.Column(db.Float, default=0.0)
+    acik_kg = db.Column(db.Float, default=0.0)
+    palet_adet = db.Column(db.Integer, default=0)
+    palet_agirlik_kg = db.Column(db.Float, default=0.0)
+    giris_kg = db.Column(db.Float, nullable=False, default=0.0)
+    mevcut_kg = db.Column(db.Float, nullable=False, default=0.0)
+    irsaliye_no = db.Column(db.String(100))
+    tarih = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    aktif = db.Column(db.Boolean, default=True)
+    notlar = db.Column(db.Text)
+
+    hammadde_kart = db.relationship('HammaddeKart', backref='lotlar')
+    tedarikci = db.relationship('Tedarikci', backref='stok_lotlari')
+    uretici = db.relationship('Uretici', backref='stok_lotlari')
+    silo = db.relationship('Silo', backref='stok_lotlari')
+    hammadde_giris = db.relationship('HammaddeGiris', backref='stok_lotlari')
+
+    @property
+    def hammadde_tipi(self):
+        return self.hammadde_kart.hammadde_tipi if self.hammadde_kart else ''
+
+    @property
+    def hammadde_kodu(self):
+        return self.hammadde_kart.hammadde_kodu if self.hammadde_kart else ''
+
+    def __repr__(self):
+        return f'<StokLot {self.hammadde_tipi} {self.lot_no or "-"} {self.mevcut_kg}kg>'
+
+
+class StokHareket(db.Model):
+    """Tüm stok değişikliklerinin izlenebilir hareket kaydı."""
+    __tablename__ = 'stok_hareketleri'
+
+    id = db.Column(db.Integer, primary_key=True)
+    lot_id = db.Column(db.Integer, db.ForeignKey('stok_lotlari.id'), nullable=True)
+    hammadde_tipi = db.Column(db.String(50), nullable=False)
+    hammadde_kodu = db.Column(db.String(100))
+    hareket_tipi = db.Column(db.String(30), nullable=False)  # giris, uretim, sayim, silme, duzeltme
+    miktar_kg = db.Column(db.Float, nullable=False)
+    onceki_kg = db.Column(db.Float)
+    sonraki_kg = db.Column(db.Float)
+    referans_tipi = db.Column(db.String(50))
+    referans_id = db.Column(db.Integer)
+    aciklama = db.Column(db.Text)
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lot = db.relationship('StokLot', backref='hareketler')
+
+    def __repr__(self):
+        return f'<StokHareket {self.hareket_tipi} {self.hammadde_tipi} {self.miktar_kg}kg>'
+
+
 class SayimFisi(db.Model):
     """Toplu sayım kayıt belgesi."""
     __tablename__ = 'sayim_fisleri'
@@ -288,4 +467,3 @@ class SayimDetay(db.Model):
     onceki_miktar = db.Column(db.Float, nullable=False)
     sayilan_miktar = db.Column(db.Float, nullable=False)
     fark = db.Column(db.Float, nullable=False) # sayilan - onceki
-

@@ -68,7 +68,10 @@
         <div class="pvc-icon">📦</div>
         <div class="pvc-info">
             <span class="pvc-type">{{ pvc.bigbag_tipi }} kg - <small>{{ pvc.urun_kodu }}</small></span>
-            <span class="pvc-count">{{ pvc.adet }} Adet</span>
+            <span class="pvc-count">{{ pvc.adet }} Tam Bigbag</span>
+            {% if pvc.acik_kg %}
+            <span class="pvc-total">Açık: {{ pvc.acik_kg|sayi }} kg</span>
+            {% endif %}
             <span class="pvc-total">{{ pvc.toplam_kg|sayi }} kg</span>
         </div>
     </div>
@@ -123,7 +126,7 @@
                 <td>{{ veri.mevcut_stok|sayi }} kg</td>
                 <td>{{ veri.haftalik_tuketim|sayi }} kg</td>
                 <td>
-                    <span style="font-size: 1.1em; font-weight: bold; color: {% if veri.hafta_kalan < 1 %}var(--danger-color){% elif veri.hafta_kalan < 2 %}var(--warning-color){% else %}var(--primary-color){% endif %};">
+                    <span style="font-size: 1.1em; font-weight: bold; color: {% if veri.hafta_kalan < 1 %}var(--red){% elif veri.hafta_kalan < 2 %}var(--orange){% else %}var(--accent){% endif %};">
                         {{ "%.1f"|format(veri.hafta_kalan) }}
                     </span>
                 </td>

@@ -97,6 +97,9 @@ function formulSecildi() {
             if (data.slip_kg > 0) items.push(['Slip', data.slip_kg]);
             if (data.pellet_kg > 0) items.push(['Pellet G.D.', data.pellet_kg]);
             if (data.kirma_sure_sn > 0) items.push(['Kırma G.D.', data.kirma_sure_sn + ' sn']);
+            Object.entries(data.ekstra_bilesenler || {}).forEach(([name, val]) => {
+                if (Number(val) > 0) items.push([name, Number(val)]);
+            });
 
             items.forEach(([name, val]) => {
                 if (val > 0) {

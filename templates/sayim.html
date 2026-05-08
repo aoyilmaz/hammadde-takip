@@ -38,23 +38,27 @@
                 </table>
             </div>
 
-            <h4 style="margin: 15px 0 10px; color: var(--primary-color);">PVC Bigbag (Adet)</h4>
+            <h4 style="margin: 15px 0 10px; color: var(--primary-color);">PVC Bigbag (kg esaslı)</h4>
             <div class="table-scroll">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Bigbag Tipi</th>
-                            <th>Mevcut Sistem (Adet)</th>
-                            <th width="150">Sayılan (Adet)</th>
+                            <th>Mevcut Sistem</th>
+                            <th width="150">Tam Bigbag</th>
+                            <th width="150">Açık kg</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for pvc in pvc_stoklar %}
                         <tr>
                             <td>{{ pvc.bigbag_tipi }} kg PVC <br><small class="text-muted">Kod: {{ pvc.urun_kodu }}</small></td>
-                            <td>{{ pvc.adet }}</td>
+                            <td>{{ pvc.adet }} adet + {{ pvc.acik_kg or 0 }} kg<br><small class="text-muted">{{ pvc.toplam_kg|sayi }} kg</small></td>
                             <td>
                                 <input type="number" name="pvc_{{ pvc.id }}" class="form-control form-control-sm" placeholder="Düzeltme yok">
+                            </td>
+                            <td>
+                                <input type="number" name="pvc_acik_{{ pvc.id }}" class="form-control form-control-sm" step="0.1" placeholder="Düzeltme yok">
                             </td>
                         </tr>
                         {% endfor %}
