@@ -4,10 +4,10 @@ Plastik film üretiminde kullanılan hammaddelerin stok girişi, silo/depolama s
 
 ## 🏭 Özellikler
 
-- **Dashboard:** Silo/tank doluluk seviyeleri, bigbag stoku, günlük üretim özeti ve tahmini stok bitiş süreleri.
-- **Tanımlar:** Hammadde kartları, tedarikçi yönetimi ve silo tanımları. Bir tedarikçiye birden fazla hammadde tipi/kodu atanabilir.
-- **Hammadde Giriş:** Tanker (dökme), Bigbag, IBC/Varil girişleri. Kantar fişine göre **Net Giriş Miktarı** manuel olarak düzenlenebilir.
-- **Formül Yönetimi:** Çoklu formül oluşturma, düzenleme, kopyalama ve snapshot bazlı geçmiş takibi.
+- **Dashboard:** Silo/tank doluluk seviyeleri, bigbag stoku, günlük üretim özeti ve **Gün Bazlı** tahmini stok bitiş süreleri. Tedarik süresine göre kritik stok uyarıları (⚠️).
+- **Tanımlar:** Açılır menü yapısıyla Hammadde Tipleri, Kartları, Tedarikçiler ve Silo tanımları. Üretici odaklı basit kart yapısı ve **Tahmini Tedarik Süresi** takibi.
+- **Hammadde Giriş:** Tanker (dökme), Bigbag, IBC/Varil girişleri. Kantar fişine göre **Net Giriş Miktarı** manuel düzenlenebilir. Tedarikçi seçilmezse üreticiyi otomatik kaydetme.
+- **Formül Yönetimi:** Çoklu formül yönetimi, snapshot bazlı geçmiş takibi ve **Dinamik Maliyet Hesaplayıcı** (Ton bazlı, USD/EUR dövizli). Hesaplamaları veritabanına kaydedebilme ve geçmiş analiz imkanı.
 - **Üretim (Parti Kayıt):** Formüle göre otomatik stok düşümü, toplu parti üretimi ve FIFO lot takibi.
 - **Geri Dönüşüm:** Kırma tankı (B-kalite) ve pellet tankı (şerit kepek) seviye takibi.
 - **Raporlama:** Günlük/tarihsel tüketim raporu, CSV dışa aktarma.
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Tarayıcıda **http://127.0.0.1:5001** adresini açın.
+Tarayıcıda **http://127.0.0.1:5002** adresini açın.
 
 ## 🛠️ Teknolojiler
 
@@ -53,7 +53,7 @@ Tarayıcıda **http://127.0.0.1:5001** adresini açın.
 
 ```
 hammadde-takip/
-├── app.py                  # Flask ana uygulama (Port: 5001)
+├── app.py                  # Flask ana uygulama (Port: 5002)
 ├── config.py               # Konfigürasyon
 ├── models.py               # Veritabanı modelleri
 ├── requirements.txt        # Python bağımlılıkları

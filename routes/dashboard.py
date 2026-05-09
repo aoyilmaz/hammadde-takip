@@ -81,16 +81,25 @@ def index():
         stoklar['PVC'] = pvc_toplam_kg
         
         # Tahminleri hesapla
+        from models import HammaddeKart
         for tip, kg_per_parti in hammadde_map.items():
             if kg_per_parti > 0:
                 haftalik_tuketim = kg_per_parti * haftalik_hedef
                 mevcut_stok = stoklar.get(tip, 0)
                 if haftalik_tuketim > 0:
                     hafta_kalan = mevcut_stok / haftalik_tuketim
+                    gun_kalan = hafta_kalan * 7
+                    
+                    # Bu tip için tanımlı kartlardaki en uzun tedarik süresini bul
+                    tedarik_suresi = db.session.query(db.func.max(HammaddeKart.tedarik_suresi_gun)).filter_by(hammadde_tipi=tip, aktif=True).scalar() or 0
+                    
                     tahminler[tip] = {
                         'haftalik_tuketim': haftalik_tuketim,
                         'mevcut_stok': mevcut_stok,
-                        'hafta_kalan': hafta_kalan
+                        'hafta_kalan': hafta_kalan,
+                        'gun_kalan': gun_kalan,
+                        'tedarik_suresi': tedarik_suresi,
+                        'kritik': gun_kalan < tedarik_suresi
                     }
 
     return render_template('dashboard.html',

@@ -158,6 +158,7 @@ class HammaddeKart(db.Model):
     bigbag_tipi = db.Column(db.Integer, nullable=True)
     birim = db.Column(db.String(20), default='kg')
     notlar = db.Column(db.Text)
+    tedarik_suresi_gun = db.Column(db.Integer, default=0)
     aktif = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -310,6 +311,27 @@ class Formul(db.Model):
 
     def __repr__(self):
         return f'<Formul {self.ad}>'
+
+
+class FormulMaliyet(db.Model):
+    """Kaydedilen formül maliyet hesaplamaları."""
+    __tablename__ = 'formul_maliyetleri'
+
+    id = db.Column(db.Integer, primary_key=True)
+    formul_id = db.Column(db.Integer, db.ForeignKey('formuller.id', ondelete='SET NULL'), nullable=True)
+    formul_ad = db.Column(db.String(200))
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    eur_usd_rate = db.Column(db.Float, default=1.0)
+    toplam_maliyet_usd = db.Column(db.Float)
+    ton_maliyet_usd = db.Column(db.Float)
+    detaylar = db.Column(db.JSON) # Bileşen fiyatları ve para birimleri
+    notlar = db.Column(db.Text)
+
+    formul = db.relationship('Formul', backref='maliyet_kayitlari')
+
+    def __repr__(self):
+        return f'<FormulMaliyet {self.formul_ad} - {self.tarih}>'
+
 
 
 class Parti(db.Model):

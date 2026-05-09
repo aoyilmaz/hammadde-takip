@@ -56,14 +56,83 @@
     </div>
     {% endfor %}
 
-    {% if not formuller %}
-    <div class="empty-state full-width">
-        <span class="empty-icon">📋</span>
-        <p>Henüz formül oluşturulmamış.</p>
-        <button class="btn btn-primary" onclick="formulModalAc()">İlk Formülü Oluştur</button>
-    </div>
-    {% endif %}
 </div>
+
+<!-- Maliyet Hesaplayıcı -->
+<section class="table-card" style="margin-top: 3rem; border-top: 2px solid var(--accent);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="card-title" style="margin:0;">🧾 Formül Maliyet Hesaplayıcı</h3>
+        <a href="{{ url_for('formul.maliyet_gecmisi') }}" class="btn btn-sm btn-secondary">📜 Geçmiş Kayıtlar</a>
+    </div>
+    <div class="filter-bar" style="margin-bottom: 1.5rem; background: rgba(56,189,248,0.05); padding: 15px; border-radius: var(--radius-md);">
+        <div class="filter-form">
+            <div class="filter-group">
+                <label>Formül Seçin</label>
+                <select id="cost_formul_select" class="form-control form-control-sm" onchange="costFormulSecildi()">
+                    <option value="">-- Formül Seç --</option>
+                    {% for f in formuller %}
+                    <option value="{{ f.id }}" data-details="{{ f.formul_snapshot()|tojson|forceescape }}">{{ f.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>EUR / USD Parite</label>
+                <input type="number" id="eur_usd_rate" class="form-control form-control-sm" value="1.08" step="0.001" oninput="costHesapla()">
+            </div>
+            <div class="filter-group">
+                <label>Hesaplama Modu</label>
+                <select id="cost_mode" class="form-control form-control-sm" onchange="costTabloGuncelle()">
+                    <option value="kg">KG Bazlı (Formül)</option>
+                    <option value="yuzde">Yüzde Bazlı (Parti)</option>
+                </select>
+            </div>
+            <div id="batch_weight_div" class="filter-group" style="display: none;">
+                <label>Toplam Parti (kg)</label>
+                <input type="number" id="total_batch_weight" class="form-control form-control-sm" value="1000" oninput="costHesapla()">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-scroll">
+        <table class="data-table" id="cost_table">
+            <thead>
+                <tr>
+                    <th>Bileşen</th>
+                    <th id="col_amount_label">Miktar (kg)</th>
+                    <th>Birim Fiyat (Ton Bazlı)</th>
+                    <th>Para Birimi</th>
+                    <th>Toplam ($)</th>
+                </tr>
+            </thead>
+            <tbody id="cost_tbody">
+                <!-- Dinamik dolacak -->
+            </tbody>
+            <tfoot>
+                <tr style="background: rgba(56,189,248,0.1); font-weight: 800;">
+                    <td id="total_label">TOPLAM REÇETE</td>
+                    <td id="total_amount">0 kg</td>
+                    <td colspan="2">-</td>
+                    <td id="total_price_usd" style="color: var(--accent); font-size: 1.1rem;">0,00 $</td>
+                </tr>
+                <tr style="background: rgba(34,197,94,0.1); font-weight: 700;">
+                    <td colspan="4">TON MALİYETİ (1000 KG)</td>
+                    <td id="ton_cost_usd" style="color: var(--green); font-size: 1.2rem;">0,00 $</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-primary" onclick="costKaydet()">💾 Hesaplamayı Kaydet</button>
+    </div>
+</section>
+
+{% if not formuller %}
+<div class="empty-state full-width">
+    <span class="empty-icon">📋</span>
+    <p>Henüz formül oluşturulmamış.</p>
+    <button class="btn btn-primary" onclick="formulModalAc()">İlk Formülü Oluştur</button>
+</div>
+{% endif %}
 
 <!-- Formül Modal -->
 <div class="modal-overlay" id="formulModal">
@@ -224,5 +293,173 @@ function formulModalKapat() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') formulModalKapat();
 });
+
+// --- MALİYET HESAPLAYICI MANTIĞI ---
+let current_cost_details = null;
+
+function costFormulSecildi() {
+    const sel = document.getElementById('cost_formul_select');
+    const opt = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset.details) {
+        current_cost_details = JSON.parse(opt.dataset.details);
+        costTabloGuncelle();
+    } else {
+        current_cost_details = null;
+        document.getElementById('cost_tbody').innerHTML = '';
+        costHesapla();
+    }
+}
+
+function costTabloGuncelle() {
+    if (!current_cost_details) return;
+    
+    const mode = document.getElementById('cost_mode').value;
+    const tbody = document.getElementById('cost_tbody');
+    const batchDiv = document.getElementById('batch_weight_div');
+    const colLabel = document.getElementById('col_amount_label');
+    
+    tbody.innerHTML = '';
+    batchDiv.style.display = (mode === 'yuzde') ? 'block' : 'none';
+    colLabel.textContent = (mode === 'yuzde') ? 'Yüzde (%)' : 'Miktar (kg)';
+    
+    const snapshot = current_cost_details;
+    const bilesenler = [
+        { ad: 'PVC', kg: snapshot.pvc_kg },
+        { ad: 'DOTP', kg: snapshot.dotp_kg },
+        { ad: 'DOA', kg: snapshot.doa_kg },
+        { ad: 'ESBO', kg: snapshot.esbo_kg },
+        { ad: 'Antifog', kg: snapshot.antifog_kg },
+        { ad: 'Stabilizer', kg: snapshot.stabilizer_kg },
+        { ad: 'Slip', kg: snapshot.slip_kg }
+    ];
+    
+    if (snapshot.ekstra_bilesenler) {
+        for (const [ad, kg] of Object.entries(snapshot.ekstra_bilesenler)) {
+            bilesenler.push({ ad, kg: parseFloat(kg) || 0 });
+        }
+    }
+    
+    const toplamKg = bilesenler.reduce((acc, b) => acc + b.kg, 0);
+    
+    bilesenler.forEach(b => {
+        if (b.kg <= 0) return;
+        
+        const row = document.createElement('tr');
+        const displayVal = (mode === 'kg') ? b.kg : ((b.kg / toplamKg) * 100).toFixed(2);
+        
+        row.innerHTML = `
+            <td>${b.ad}</td>
+            <td class="b-amount" data-kg="${b.kg}" data-yuzde="${(b.kg / toplamKg) * 100}">${displayVal} ${mode === 'kg' ? 'kg' : '%'}</td>
+            <td><input type="number" class="form-control form-control-sm b-price" step="1" value="0" oninput="costHesapla()" style="width: 100px;"></td>
+            <td>
+                <select class="form-control form-control-sm b-currency" onchange="costHesapla()">
+                    <option value="USD">$ (USD)</option>
+                    <option value="EUR">€ (EUR)</option>
+                </select>
+            </td>
+            <td class="b-total">0,00 $</td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    costHesapla();
+}
+
+function costHesapla() {
+    const mode = document.getElementById('cost_mode').value;
+    const batchWeight = parseFloat(document.getElementById('total_batch_weight').value) || 0;
+    const eurUsdRate = parseFloat(document.getElementById('eur_usd_rate').value) || 1;
+    const rows = document.querySelectorAll('#cost_tbody tr');
+    
+    let totalBatchKg = 0;
+    let totalBatchPriceUsd = 0;
+    
+    rows.forEach(row => {
+        const amountTd = row.querySelector('.b-amount');
+        const priceInput = row.querySelector('.b-price');
+        const currencySelect = row.querySelector('.b-currency');
+        const totalTd = row.querySelector('.b-total');
+        
+        const kgVal = parseFloat(amountTd.dataset.kg) || 0;
+        const yuzdeVal = parseFloat(amountTd.dataset.yuzde) || 0;
+        let priceTon = parseFloat(priceInput.value) || 0;
+        const currency = currencySelect.value;
+        
+        // Ton bazlı fiyatı USD'ye çevir
+        let priceTonUsd = (currency === 'EUR') ? (priceTon * eurUsdRate) : priceTon;
+        let priceKgUsd = priceTonUsd / 1000;
+
+        let rowKg = 0;
+        if (mode === 'kg') {
+            rowKg = kgVal;
+        } else {
+            rowKg = (batchWeight * yuzdeVal) / 100;
+        }
+        
+        const rowTotalUsd = rowKg * priceKgUsd;
+        totalBatchKg += rowKg;
+        totalBatchPriceUsd += rowTotalUsd;
+        
+        totalTd.textContent = rowTotalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
+    });
+    
+    document.getElementById('total_amount').textContent = totalBatchKg.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' kg';
+    document.getElementById('total_price_usd').textContent = totalBatchPriceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
+    
+    const unitCostUsd = totalBatchKg > 0 ? (totalBatchPriceUsd / totalBatchKg) : 0;
+    const tonCostUsd = unitCostUsd * 1000;
+    
+    document.getElementById('ton_cost_usd').textContent = tonCostUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
+}
+
+function costKaydet() {
+    const formulId = document.getElementById('cost_formul_select').value;
+    if (!formulId) {
+        alert('Lütfen önce bir formül seçin.');
+        return;
+    }
+
+    const eurUsdRate = parseFloat(document.getElementById('eur_usd_rate').value) || 1;
+    const tonCostUsd = parseFloat(document.getElementById('ton_cost_usd').textContent.replace(/[^0-9.-]+/g, "")) || 0;
+    const totalCostUsd = parseFloat(document.getElementById('total_price_usd').textContent.replace(/[^0-9.-]+/g, "")) || 0;
+    
+    const detaylar = [];
+    document.querySelectorAll('#cost_tbody tr').forEach(row => {
+        detaylar.push({
+            ad: row.cells[0].textContent,
+            miktar: row.querySelector('.b-amount').textContent,
+            fiyat_ton: row.querySelector('.b-price').value,
+            doviz: row.querySelector('.b-currency').value,
+            toplam_usd: row.querySelector('.b-total').textContent
+        });
+    });
+
+    const data = {
+        formul_id: formulId,
+        eur_usd_rate: eurUsdRate,
+        toplam_maliyet_usd: totalCostUsd,
+        ton_maliyet_usd: tonCostUsd,
+        detaylar: detaylar,
+        notlar: prompt('Varsa notunuzu ekleyin:', '') || ''
+    };
+
+    fetch("{{ url_for('formul.maliyet_kaydet') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.status === 'success') {
+            alert(result.message);
+        } else {
+            alert('Hata: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Bir hata oluştu!');
+    });
+}
 </script>
 {% endblock %}

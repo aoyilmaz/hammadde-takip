@@ -123,13 +123,16 @@
                 <input type="date" name="tarih" id="tarih" class="form-control" value="{{ today }}">
             </div>
             <div class="form-group">
-                <label for="tedarikci_id">Tedarikçi</label>
-                <select name="tedarikci_id" id="tedarikci_id" class="form-control" onchange="tedarikciDegisti()">
-                    <option value="">-- Seçin --</option>
+                <label for="tedarikci_id">Tedarikçi / İthalatçı</label>
+                <select name="tedarikci_id" id="tedarikci_id" class="form-control">
+                    <option value="">-- Firma Seçin (Veya boş bırakın) --</option>
+                    {% for t in tedarikciler %}
+                    <option value="{{ t.id }}">{{ t.ad }}</option>
+                    {% endfor %}
                 </select>
                 <input type="hidden" name="urun_kodu" id="urun_kodu">
-                <small id="urun_kodu_display" style="display: none; color: var(--primary-color); font-weight: 600; margin-top: 5px;"></small>
-                <small style="display: block; margin-top: 5px;"><a href="{{ url_for('tanimlar.index') }}" style="color: var(--primary-color);">Tanımları Yönet</a></small>
+                <small id="urun_kodu_display" style="display: none; color: var(--accent); font-weight: 600; margin-top: 5px;"></small>
+                <small style="display: block; margin-top: 5px;"><a href="{{ url_for('tanimlar.hammadde') }}" style="color: var(--accent);">Tanımları Yönet</a></small>
             </div>
             <div class="form-group">
                 <label for="irsaliye_no">İrsaliye No</label>
@@ -278,24 +281,7 @@ function hammaddeTipiDegisti() {
     }
 
     const tedarikciSelect = document.getElementById('tedarikci_id');
-    tedarikciSelect.innerHTML = '<option value="">-- Seçin --</option>';
-    if (tip) {
-        const tedarikciMap = {{ tedarikci_map|tojson|safe }};
-        tedarikciMap.forEach(t => {
-            t.tipler.filter(h => h.tip === tip).forEach(eslesme => {
-                const option = document.createElement('option');
-                option.value = t.id;
-                option.textContent = t.ad + [eslesme.kod, eslesme.uretici].filter(Boolean).map(v => ` (${v})`).join('');
-                option.dataset.kod = eslesme.kod || '';
-                option.dataset.uretici = eslesme.uretici || '';
-                option.dataset.paketleme = eslesme.paketleme || '';
-                option.dataset.birimKg = eslesme.birim_kg || '';
-                option.dataset.bigbagTipi = eslesme.bigbag_tipi || '';
-                tedarikciSelect.appendChild(option);
-            });
-        });
-    }
-    tedarikciDegisti(); // Temizle
+    // Tedarikçi listesi statik olarak Jinja ile doluyor, filtrelemeye gerek yok.
 }
 
 function tanimdanDoldur(option) {
@@ -313,27 +299,14 @@ function tanimdanDoldur(option) {
     }
     if (option.dataset.bigbagTipi) {
         document.getElementById('bigbag_tipi').value = option.dataset.bigbagTipi;
-        bigbagHesapla();
     }
     urunKoduGoster();
+    hesaplaVeGuncelle();
 }
 
 function hammaddeKartiSecildi() {
     const sel = document.getElementById('hammadde_kart_secimi');
     tanimdanDoldur(sel.options[sel.selectedIndex]);
-}
-
-function tedarikciDegisti() {
-    const sel = document.getElementById('tedarikci_id');
-    const display = document.getElementById('urun_kodu_display');
-    const hidden = document.getElementById('urun_kodu');
-    
-    const selectedOption = sel.options[sel.selectedIndex];
-    const kod = selectedOption ? (selectedOption.dataset.kod || '') : '';
-    const uretici = selectedOption ? (selectedOption.dataset.uretici || '') : '';
-    
-    hidden.value = kod;
-    tanimdanDoldur(selectedOption);
 }
 
 function urunKoduGoster() {

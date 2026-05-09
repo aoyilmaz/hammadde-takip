@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Tedarikçiler{% endblock %}
+{% block page_title %}Tedarikçi Listesi{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <!-- Sol: Ekleme Formu -->
+    <section class="form-card">
+        <h3 class="card-title" id="form-title">Yeni Tedarikçi / İthalatçı Ekle</h3>
+        <form action="{{ url_for('tanimlar.tedarikci_kaydet') }}" method="POST">
+            <input type="hidden" name="tedarikci_id" id="ted_id">
+            <div class="form-group">
+                <label for="ad">Firma Adı</label>
+                <input type="text" name="ad" id="ad" class="form-control" required placeholder="Tedarikçi firma adı">
+            </div>
+            <div class="form-group">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="3" placeholder="İletişim bilgileri, ödeme koşulları vb."></textarea>
+            </div>
+            <div class="form-actions" style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Tedarikçiyi Kaydet</button>
+                <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;" onclick="formTemizle()">İptal</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Sağ: Liste -->
+    <section class="table-card">
+        <h3 class="card-title">Kayıtlı Tedarikçiler</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Firma Adı</th>
+                    <th>Notlar</th>
+                    <th>Son Alımlar</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ted in kayitlar %}
+                <tr>
+                    <td><strong>{{ ted.ad }}</strong></td>
+                    <td><small>{{ ted.notlar or '-' }}</small></td>
+                    <td>
+                        {% if ted.son_alimlar %}
+                        <div class="purchase-history">
+                            {% for alim in ted.son_alimlar %}
+                            <div class="definition-pill" title="{{ alim.tarih }}">
+                                <span>{{ alim.hammadde_tipi }}</span> {{ alim.miktar_kg|sayi }} kg
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <small class="text-muted">Alım kaydı yok</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <button class="btn btn-sm btn-secondary" onclick="duzenle({{ ted.id }}, '{{ ted.ad|replace("'", "\\'") }}', '{{ (ted.notlar or '')|replace('\n', ' ')|replace("'", "\\'") }}')">✏️</button>
+                            <form action="{{ url_for('tanimlar.tedarikci_sil', ted_id=ted.id) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function duzenle(id, ad, notlar) {
+    document.getElementById('ted_id').value = id;
+    document.getElementById('ad').value = ad;
+    document.getElementById('notlar').value = notlar;
+    
+    document.getElementById('form-title').textContent = 'Tedarikçi Bilgilerini Düzenle';
+    document.getElementById('submit-btn').textContent = 'Güncelle';
+    document.getElementById('cancel-btn').style.display = 'inline-flex';
+}
+
+function formTemizle() {
+    document.getElementById('ted_id').value = '';
+    document.getElementById('ad').value = '';
+    document.getElementById('notlar').value = '';
+    
+    document.getElementById('form-title').textContent = 'Yeni Tedarikçi / İthalatçı Ekle';
+    document.getElementById('submit-btn').textContent = 'Tedarikçiyi Kaydet';
+    document.getElementById('cancel-btn').style.display = 'none';
+}
+</script>
+{% endblock %}

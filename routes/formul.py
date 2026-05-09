@@ -93,3 +93,53 @@ def kopyala(formul_id):
     db.session.commit()
     flash(f'"{kaynak.ad}" formülü kopyalandı.', 'success')
     return redirect(url_for('formul.index'))
+
+
+@formul_bp.route('/maliyet-kaydet', methods=['POST'])
+def maliyet_kaydet():
+    """Hesaplanan maliyeti veritabanına kaydet."""
+    from models import FormulMaliyet
+    import json
+
+    data = request.get_json()
+    formul_id = data.get('formul_id')
+    eur_usd_rate = float(data.get('eur_usd_rate', 1.0))
+    toplam_maliyet_usd = float(data.get('toplam_maliyet_usd', 0))
+    ton_maliyet_usd = float(data.get('ton_maliyet_usd', 0))
+    detaylar = data.get('detaylar', {})
+    notlar = data.get('notlar', '')
+
+    formul = Formul.query.get(formul_id) if formul_id else None
+    formul_ad = formul.ad if formul else "İsimsiz Hesaplama"
+
+    kayit = FormulMaliyet(
+        formul_id=formul.id if formul else None,
+        formul_ad=formul_ad,
+        eur_usd_rate=eur_usd_rate,
+        toplam_maliyet_usd=toplam_maliyet_usd,
+        ton_maliyet_usd=ton_maliyet_usd,
+        detaylar=detaylar,
+        notlar=notlar
+    )
+    db.session.add(kayit)
+    db.session.commit()
+
+    return {"status": "success", "message": "Maliyet kaydı başarıyla oluşturuldu."}
+
+
+@formul_bp.route('/maliyet-gecmisi')
+def maliyet_gecmisi():
+    """Geçmiş maliyet hesaplamalarını listele."""
+    from models import FormulMaliyet
+    kayitlar = FormulMaliyet.query.order_by(FormulMaliyet.tarih.desc()).all()
+    return render_template('maliyet_gecmisi.html', kayitlar=kayitlar)
+
+
+@formul_bp.route('/maliyet-sil/<int:id>', methods=['POST'])
+def maliyet_sil(id):
+    from models import FormulMaliyet
+    kayit = FormulMaliyet.query.get_or_404(id)
+    db.session.delete(kayit)
+    db.session.commit()
+    flash('Maliyet kaydı silindi.', 'success')
+    return redirect(url_for('formul.maliyet_gecmisi'))

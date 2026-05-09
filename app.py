@@ -58,7 +58,7 @@ def create_app():
     from routes.geri_donus import geri_donus_bp
     from routes.rapor import rapor_bp
     from routes.ayarlar import ayarlar_bp
-    from routes.tedarikci import tedarikci_bp
+
     from routes.sayim import sayim_bp
     from routes.tanimlar import tanimlar_bp
 
@@ -69,7 +69,7 @@ def create_app():
     app.register_blueprint(geri_donus_bp, url_prefix="/geri-donus")
     app.register_blueprint(rapor_bp, url_prefix="/rapor")
     app.register_blueprint(ayarlar_bp, url_prefix="/ayarlar")
-    app.register_blueprint(tedarikci_bp, url_prefix="/tedarikci")
+
     app.register_blueprint(sayim_bp, url_prefix="/sayim")
     app.register_blueprint(tanimlar_bp, url_prefix="/tanimlar")
 
@@ -319,6 +319,7 @@ def ensure_schema(app):
             ("paketleme_tipi", "VARCHAR(30) DEFAULT 'dokme'"),
             ("birim_agirlik_kg", "FLOAT DEFAULT 0"),
             ("bigbag_tipi", "INTEGER"),
+            ("tedarik_suresi_gun", "INTEGER DEFAULT 0"),
         ],
     }
 
@@ -345,4 +346,4 @@ def ensure_schema(app):
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5002)

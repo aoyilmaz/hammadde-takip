@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Hammadde Kartları{% endblock %}
+{% block page_title %}Hammadde Kartları{% endblock %}
+
+{% block content %}
+<!-- Filtre Çubuğu -->
+<section class="filter-bar">
+    <form action="{{ url_for('tanimlar.hammadde') }}" method="GET" class="filter-form">
+        <div class="filter-group">
+            <label for="f_tip">Hammadde Tipi</label>
+            <select name="tip" id="f_tip" class="form-control form-control-sm">
+                <option value="">-- Tüm Tipler --</option>
+                {% for t in tipler %}
+                <option value="{{ t.ad }}" {% if tip_filtre == t.ad %}selected{% endif %}>{{ t.ad }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary">Filtrele</button>
+        {% if tip_filtre %}
+        <a href="{{ url_for('tanimlar.hammadde') }}" class="btn btn-sm btn-secondary">Temizle</a>
+        {% endif %}
+    </form>
+</section>
+
+<div class="two-column">
+    <!-- Sol: Ekleme Formu -->
+    <section class="form-card">
+        <h3 class="card-title" id="form-title">Yeni Hammadde Kartı Ekle</h3>
+        <form action="{{ url_for('tanimlar.hammadde_kaydet') }}" method="POST">
+            <input type="hidden" name="kart_id" id="kart_id">
+            
+            <div class="form-group">
+                <label for="hammadde_tipi">Hammadde Tipi</label>
+                <select name="hammadde_tipi" id="hammadde_tipi" class="form-control" required>
+                    <option value="">-- Seçin --</option>
+                    {% for t in tipler %}
+                    <option value="{{ t.ad }}">{{ t.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="uretici_ad">Üretici Firma</label>
+                <input type="text" name="uretici_ad" id="uretici_ad" class="form-control" placeholder="Üretici adı">
+            </div>
+
+            <div class="form-group">
+                <label for="hammadde_kodu">Hammadde Kodu / Marka</label>
+                <input type="text" name="hammadde_kodu" id="hammadde_kodu" class="form-control" placeholder="Örn: K67, PET-G">
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="paketleme_tipi">Varsayılan Paketleme</label>
+                    <select name="paketleme_tipi" id="paketleme_tipi" class="form-control">
+                        <option value="dokme">Dökme / Tanker</option>
+                        <option value="bigbag">Bigbag</option>
+                        <option value="torba">Torba</option>
+                        <option value="palet">Torbalı Palet</option>
+                        <option value="ibc">IBC</option>
+                        <option value="varil">Varil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="birim_agirlik_kg">Paket Büyüklüğü (kg)</label>
+                    <input type="number" name="birim_agirlik_kg" id="birim_agirlik_kg" class="form-control" step="0.1" value="0">
+                </div>
+            </div>
+
+            <div class="form-group" id="bigbag-div" style="display:none;">
+                <label for="bigbag_tipi">Bigbag Standardı (kg)</label>
+                <input type="number" name="bigbag_tipi" id="bigbag_tipi" class="form-control" value="0">
+            </div>
+
+            <div class="form-group">
+                <label for="tedarik_suresi_gun">Tahmini Tedarik Süresi (Gün)</label>
+                <input type="number" name="tedarik_suresi_gun" id="tedarik_suresi_gun" class="form-control" value="0" min="0">
+                <small class="text-muted">Stok uyarıları için kullanılır.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="notlar">Notlar</label>
+                <textarea name="notlar" id="notlar" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Kartı Kaydet</button>
+                <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;" onclick="formTemizle()">İptal</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Sağ: Liste -->
+    <section class="table-card">
+        <h3 class="card-title">Mevcut Hammaddeler</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tip / Kod</th>
+                    <th>Üretici</th>
+                    <th>Paketleme</th>
+                    <th>Tedarik</th>
+                    <th>Notlar</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kart in kayitlar %}
+                <tr>
+                    <td>
+                        <strong>{{ kart.hammadde_tipi }}</strong><br>
+                        <small class="text-muted">{{ kart.hammadde_kodu }}</small>
+                    </td>
+                    <td>{{ kart.uretici.ad if kart.uretici else '-' }}</td>
+                    <td>
+                        {{ kart.paketleme_tipi|title }}<br>
+                        <small>{{ kart.birim_agirlik_kg|sayi }} kg</small>
+                    </td>
+                    <td><span class="badge">{{ kart.tedarik_suresi_gun }} gün</span></td>
+                    <td><small>{{ kart.notlar or '-' }}</small></td>
+                    <td>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <button class="btn btn-sm btn-secondary" onclick="duzenle({{ kart.id }}, '{{ kart.hammadde_tipi }}', '{{ (kart.uretici.ad if kart.uretici else '')|replace("'", "\\'") }}', '{{ kart.hammadde_kodu }}', '{{ kart.paketleme_tipi }}', {{ kart.birim_agirlik_kg }}, {{ kart.bigbag_tipi or 0 }}, '{{ (kart.notlar or '')|replace('\n', ' ')|replace("'", "\\'") }}', {{ kart.tedarik_suresi_gun or 0 }})">✏️</button>
+                            <form action="{{ url_for('tanimlar.hammadde_sil', kart_id=kart.id) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function duzenle(id, tip, uretici, kod, paketleme, agirlik, bbTipi, notlar, tedarik) {
+    document.getElementById('kart_id').value = id;
+    document.getElementById('hammadde_tipi').value = tip;
+    document.getElementById('uretici_ad').value = uretici;
+    document.getElementById('hammadde_kodu').value = kod;
+    document.getElementById('paketleme_tipi').value = paketleme;
+    document.getElementById('birim_agirlik_kg').value = agirlik;
+    document.getElementById('bigbag_tipi').value = bbTipi;
+    document.getElementById('notlar').value = notlar;
+    document.getElementById('tedarik_suresi_gun').value = tedarik || 0;
+    
+    document.getElementById('form-title').textContent = 'Hammadde Kartını Düzenle';
+    document.getElementById('submit-btn').textContent = 'Güncelle';
+    document.getElementById('cancel-btn').style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function formTemizle() {
+    document.getElementById('kart_id').value = '';
+    document.getElementById('hammadde_tipi').value = '';
+    document.getElementById('uretici_ad').value = '';
+    document.getElementById('hammadde_kodu').value = '';
+    document.getElementById('paketleme_tipi').value = 'dokme';
+    document.getElementById('birim_agirlik_kg').value = '0';
+    document.getElementById('bigbag_tipi').value = '0';
+    document.getElementById('notlar').value = '';
+    document.getElementById('tedarik_suresi_gun').value = '0';
+    
+    document.getElementById('form-title').textContent = 'Yeni Hammadde Kartı Ekle';
+    document.getElementById('submit-btn').textContent = 'Kartı Kaydet';
+    document.getElementById('cancel-btn').style.display = 'none';
+}
+</script>
+{% endblock %}

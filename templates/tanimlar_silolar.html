@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Silo ve Tanklar{% endblock %}
+{% block page_title %}Silo / Tank Tanımları{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <!-- Sol: Ekleme Formu -->
+    <section class="form-card">
+        <h3 class="card-title" id="form-title">Yeni Silo/Tank Ekle</h3>
+        <form action="{{ url_for('tanimlar.silo_kaydet') }}" method="POST">
+            <input type="hidden" name="silo_id" id="silo_id">
+            
+            <div class="form-group">
+                <label for="silo_ad">Silo / Tank Adı</label>
+                <input type="text" name="silo_ad" id="silo_ad" class="form-control" required placeholder="Örn: Silo 1, Tank A">
+            </div>
+
+            <div class="form-group">
+                <label for="silo_hammadde_tipi">Hammadde Tipi</label>
+                <select name="silo_hammadde_tipi" id="silo_hammadde_tipi" class="form-control" required>
+                    <option value="">-- Seçin --</option>
+                    {% for t in tipler %}
+                    <option value="{{ t.ad }}">{{ t.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="silo_tipi">Silo Tipi</label>
+                <select name="silo_tipi" id="silo_tipi" class="form-control">
+                    <option value="silo">Silo (Dış)</option>
+                    <option value="tank">İç Tank</option>
+                    <option value="geri_donus">Geri Dönüşüm Tankı</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="kapasite_kg">Kapasite (kg)</label>
+                <input type="number" name="kapasite_kg" id="kapasite_kg" class="form-control" step="0.1" required>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Silo Kaydet</button>
+                <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;" onclick="formTemizle()">İptal</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Sağ: Liste -->
+    <section class="table-card">
+        <h3 class="card-title">Mevcut Silolar</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Tip</th>
+                    <th>Kapasite</th>
+                    <th>Stok</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for silo in kayitlar %}
+                <tr>
+                    <td><strong>{{ silo.ad }}</strong></td>
+                    <td><span class="badge badge-blue">{{ silo.hammadde_tipi }}</span></td>
+                    <td>{{ silo.kapasite_kg|sayi }} kg</td>
+                    <td>{{ silo.mevcut_kg|sayi }} kg</td>
+                    <td>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <button class="btn btn-sm btn-secondary" onclick="duzenle({{ silo.id }}, '{{ silo.ad }}', '{{ silo.hammadde_tipi }}', '{{ silo.silo_tipi }}', {{ silo.kapasite_kg }})">✏️</button>
+                            <form action="{{ url_for('tanimlar.silo_sil', silo_id=silo.id) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function duzenle(id, ad, tip, s_tip, kapasite) {
+    document.getElementById('silo_id').value = id;
+    document.getElementById('silo_ad').value = ad;
+    document.getElementById('silo_hammadde_tipi').value = tip;
+    document.getElementById('silo_tipi').value = s_tip;
+    document.getElementById('kapasite_kg').value = kapasite;
+    
+    document.getElementById('form-title').textContent = 'Silo Bilgilerini Düzenle';
+    document.getElementById('submit-btn').textContent = 'Güncelle';
+    document.getElementById('cancel-btn').style.display = 'inline-flex';
+}
+
+function formTemizle() {
+    document.getElementById('silo_id').value = '';
+    document.getElementById('silo_ad').value = '';
+    document.getElementById('silo_hammadde_tipi').value = '';
+    document.getElementById('silo_tipi').value = 'silo';
+    document.getElementById('kapasite_kg').value = '';
+    
+    document.getElementById('form-title').textContent = 'Yeni Silo/Tank Ekle';
+    document.getElementById('submit-btn').textContent = 'Silo Kaydet';
+    document.getElementById('cancel-btn').style.display = 'none';
+}
+</script>
+{% endblock %}

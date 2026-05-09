@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Maliyet Hesaplama Geçmişi{% endblock %}
+{% block page_title %}Maliyet Hesaplama Geçmişi{% endblock %}
+
+{% block content %}
+<div class="table-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 class="card-title" style="margin:0;">📜 Kayıtlı Maliyet Hesaplamaları</h3>
+        <a href="{{ url_for('formul.index') }}" class="btn btn-sm btn-secondary">← Hesaplayıcıya Dön</a>
+    </div>
+
+    {% if kayitlar %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Formül</th>
+                <th>EUR/USD Parite</th>
+                <th>Toplam Maliyet ($)</th>
+                <th>Ton Maliyeti ($)</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kayit in kayitlar %}
+            <tr>
+                <td>{{ kayit.tarih|tarih_saat }}</td>
+                <td>
+                    <strong>{{ kayit.formul_ad }}</strong>
+                    {% if kayit.notlar %}
+                    <br><small class="text-muted">📝 {{ kayit.notlar }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ kayit.eur_usd_rate }}</td>
+                <td>{{ kayit.toplam_maliyet_usd|sayi }} $</td>
+                <td><strong style="color: var(--green);">{{ kayit.ton_maliyet_usd|sayi }} $</strong></td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-secondary" onclick="detayGoster({{ kayit.id }})">👁️ Detay</button>
+                        <form action="{{ url_for('formul.maliyet_sil', id=kayit.id) }}" method="POST" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?')">
+                            <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Detay Modal Verisi (Hidden) -->
+                    <div id="detay-{{ kayit.id }}" style="display:none;">
+                        {{ kayit.detaylar|tojson }}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Henüz kaydedilmiş bir maliyet hesaplaması bulunmuyor.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Detay Modal -->
+<div class="modal-overlay" id="detayModal">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Hesaplama Detayları</h3>
+            <button class="modal-close" onclick="modalKapat()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Bileşen</th>
+                        <th>Miktar</th>
+                        <th>Fiyat (Ton)</th>
+                        <th>Döviz</th>
+                        <th>Toplam ($)</th>
+                    </tr>
+                </thead>
+                <tbody id="detay-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function detayGoster(id) {
+    const data = JSON.parse(document.getElementById('detay-' + id).textContent);
+    const tbody = document.getElementById('detay-tbody');
+    tbody.innerHTML = '';
+    
+    data.forEach(d => {
+        const row = `
+            <tr>
+                <td>${d.ad}</td>
+                <td>${d.miktar}</td>
+                <td>${d.fiyat_ton}</td>
+                <td>${d.doviz}</td>
+                <td>${d.toplam_usd}</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+    });
+    
+    document.getElementById('detayModal').style.display = 'flex';
+}
+
+function modalKapat() {
+    document.getElementById('detayModal').style.display = 'none';
+}
+</script>
+{% endblock %}

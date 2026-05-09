@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Hammadde Tipleri{% endblock %}
+{% block page_title %}Hammadde Tipleri{% endblock %}
+
+{% block content %}
+<div class="two-column">
+    <!-- Sol: Ekleme Formu -->
+    <section class="form-card">
+        <h3 class="card-title" id="form-title">Yeni Hammadde Tipi Ekle</h3>
+        <form action="{{ url_for('tanimlar.hammadde_tipi_kaydet') }}" method="POST">
+            <input type="hidden" name="tipi_id" id="tipi_id">
+            <div class="form-group">
+                <label for="ad">Tip Adı</label>
+                <input type="text" name="ad" id="ad" class="form-control" required placeholder="Örn: PVC, DOA, DOTP">
+            </div>
+            <div class="form-group">
+                <label for="aciklama">Açıklama</label>
+                <textarea name="aciklama" id="aciklama" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-actions" style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Kaydet</button>
+                <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;" onclick="formTemizle()">İptal</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Sağ: Liste -->
+    <section class="table-card">
+        <h3 class="card-title">Mevcut Hammadde Tipleri</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tip Adı</th>
+                    <th>Açıklama</th>
+                    <th style="width: 100px;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tip in kayitlar %}
+                <tr>
+                    <td><strong>{{ tip.ad }}</strong></td>
+                    <td><small>{{ tip.aciklama or '-' }}</small></td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-secondary" onclick="duzenle({{ tip.id }}, '{{ tip.ad }}', '{{ tip.aciklama or '' }}')">✏️</button>
+                            <form action="{{ url_for('tanimlar.hammadde_tipi_sil', tipi_id=tip.id) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function duzenle(id, ad, aciklama) {
+    document.getElementById('tipi_id').value = id;
+    document.getElementById('ad').value = ad;
+    document.getElementById('aciklama').value = aciklama;
+    document.getElementById('form-title').textContent = 'Hammadde Tipini Düzenle';
+    document.getElementById('submit-btn').textContent = 'Güncelle';
+    document.getElementById('cancel-btn').style.display = 'inline-flex';
+}
+
+function formTemizle() {
+    document.getElementById('tipi_id').value = '';
+    document.getElementById('ad').value = '';
+    document.getElementById('aciklama').value = '';
+    document.getElementById('form-title').textContent = 'Yeni Hammadde Tipi Ekle';
+    document.getElementById('submit-btn').textContent = 'Kaydet';
+    document.getElementById('cancel-btn').style.display = 'none';
+}
+</script>
+{% endblock %}

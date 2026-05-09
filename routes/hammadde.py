@@ -23,10 +23,10 @@ def index():
     pvc_stoklar = PvcStok.query.all()
     girisler = HammaddeGiris.query.order_by(HammaddeGiris.created_at.desc()).limit(20).all()
 
-    # Hammadde tipleri (HammaddeTipi tablosundan)
-    hammadde_tipleri_obj = HammaddeTipi.query.filter_by(aktif=True).order_by(HammaddeTipi.ad).all()
-    hammadde_tipleri = [t.ad for t in hammadde_tipleri_obj]
+    # Hammadde tipleri
+    hammadde_tipleri = [t.ad for t in HammaddeTipi.query.filter_by(aktif=True).order_by(HammaddeTipi.ad).all()]
     
+    # Hammadde Kartları (Frontend otomatik doldurma için)
     hammadde_kart_map = [{
         'tip': k.hammadde_tipi,
         'kod': k.hammadde_kodu or '',
@@ -34,37 +34,25 @@ def index():
         'paketleme': k.paketleme_tipi or '',
         'birim_kg': k.birim_agirlik_kg or 0,
         'bigbag_tipi': k.bigbag_tipi or 0
-    } for k in HammaddeKart.query.filter_by(aktif=True).order_by(HammaddeKart.hammadde_tipi, HammaddeKart.hammadde_kodu).all()]
+    } for k in HammaddeKart.query.filter_by(aktif=True).all()]
 
-    # Tedarikçiler
-    tedarikciler = Tedarikci.query.filter_by(aktif=True).all()
-    tedarikci_map = []
-    for t in tedarikciler:
-        tipler = [{
-            'tip': th.hammadde_tipi,
-            'kod': th.urun_kodu or '',
-            'uretici': th.uretici.ad if th.uretici else '',
-            'paketleme': th.paketleme_tipi or '',
-            'birim_kg': th.birim_agirlik_kg or 0,
-            'bigbag_tipi': th.bigbag_tipi or 0
-        } for th in t.hammadde_tipleri]
-        tedarikci_map.append({'id': t.id, 'ad': t.ad, 'tipler': tipler})
+    # Tedarikçiler (Basit liste)
+    tedarikciler = Tedarikci.query.filter_by(aktif=True).order_by(Tedarikci.ad).all()
 
-    # Bigbag tiplerini topla (HammaddeKart ve PvcStok'tan)
-    bigbag_tipileri = set()
-    for kart in HammaddeKart.query.filter_by(aktif=True).all():
-        if kart.bigbag_tipi:
-            bigbag_tipileri.add(int(kart.bigbag_tipi))
-    for pvc in pvc_stoklar:
-        bigbag_tipileri.add(int(pvc.bigbag_tipi))
-    
-    bigbag_tipleri = sorted(list(bigbag_tipileri)) if bigbag_tipileri else [750, 1000, 1100]
+    # Bigbag tipleri
+    bigbag_tipleri = [750, 1000, 1100]
+    # Kayıtlı kartlardan ek varsa ekle
+    bb_kart = db.session.query(HammaddeKart.bigbag_tipi).filter(HammaddeKart.bigbag_tipi != None).distinct().all()
+    for b in bb_kart:
+        if b[0] and b[0] not in bigbag_tipleri:
+            bigbag_tipleri.append(int(b[0]))
+    bigbag_tipleri.sort()
 
     return render_template('hammadde_giris.html',
                            silolar=silolar,
                            pvc_stoklar=pvc_stoklar,
                            girisler=girisler,
-                           tedarikci_map=tedarikci_map,
+                           tedarikciler=tedarikciler,
                            hammadde_kart_map=hammadde_kart_map,
                            hammadde_tipleri=hammadde_tipleri,
                            bigbag_tipleri=bigbag_tipleri)
@@ -76,10 +64,20 @@ def ekle():
     hammadde_tipi = request.form.get('hammadde_tipi')
     tarih_str = request.form.get('tarih', '')
     tedarikci_id_str = request.form.get('tedarikci_id', '')
-    tedarikci_id = int(tedarikci_id_str) if tedarikci_id_str else None
-    urun_kodu = request.form.get('urun_kodu', '')
-    uretici_ad = request.form.get('uretici_ad', '')
+    tedarikci_id = int(tedarikci_id_str) if tedarikci_id_str and tedarikci_id_str != 'None' else None
+    uretici_ad = request.form.get('uretici_ad', '').strip()
+    
+    # Tedarikçi seçilmemişse üreticiyi tedarikçi olarak kullan
+    if not tedarikci_id and uretici_ad:
+        ted = Tedarikci.query.filter_by(ad=uretici_ad).first()
+        if not ted:
+            ted = Tedarikci(ad=uretici_ad, notlar="Otomatik oluşturuldu (Üretici)")
+            db.session.add(ted)
+            db.session.flush()
+        tedarikci_id = ted.id
+
     uretici = get_or_create_uretici(uretici_ad)
+    urun_kodu = request.form.get('urun_kodu', '')
     lot_no = request.form.get('lot_no', '')
     paketleme_tipi = request.form.get('paketleme_tipi', 'dokme')
     paket_adet = parse_int(request.form.get('paket_adet'), 0)

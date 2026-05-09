@@ -114,26 +114,28 @@
             <tr>
                 <th>Hammadde</th>
                 <th>Mevcut Stok</th>
-                <th>Haftalık Tüketim</th>
-                <th>Kalan Süre (Hafta)</th>
+                <th>Günlük Tüketim (Ort.)</th>
+                <th>Tedarik Süresi</th>
+                <th>Kalan Süre (Gün)</th>
                 <th>Durum</th>
             </tr>
         </thead>
         <tbody>
             {% for tip, veri in tahminler.items() %}
-            <tr>
+            <tr {% if veri.kritik %}style="background: rgba(239, 68, 68, 0.05);"{% endif %}>
                 <td><strong>{{ tip }}</strong></td>
                 <td>{{ veri.mevcut_stok|sayi }} kg</td>
-                <td>{{ veri.haftalik_tuketim|sayi }} kg</td>
+                <td>{{ (veri.haftalik_tuketim / 7)|sayi }} kg</td>
+                <td>{{ veri.tedarik_suresi }} gün</td>
                 <td>
-                    <span style="font-size: 1.1em; font-weight: bold; color: {% if veri.hafta_kalan < 1 %}var(--red){% elif veri.hafta_kalan < 2 %}var(--orange){% else %}var(--accent){% endif %};">
-                        {{ "%.1f"|format(veri.hafta_kalan) }}
+                    <span style="font-size: 1.1em; font-weight: bold; color: {% if veri.kritik %}var(--red){% elif veri.gun_kalan < 7 %}var(--orange){% else %}var(--accent){% endif %};">
+                        {{ "%.1f"|format(veri.gun_kalan) }} gün
                     </span>
                 </td>
                 <td>
-                    {% if veri.hafta_kalan < 1 %}
-                    <span class="badge badge-red">Kritik</span>
-                    {% elif veri.hafta_kalan < 2 %}
+                    {% if veri.kritik %}
+                    <span class="badge badge-red" title="Tedarik süresi kalan süreden uzun!">⚠️ KRİTİK</span>
+                    {% elif veri.gun_kalan < 7 %}
                     <span class="badge badge-orange">Sipariş Ver</span>
                     {% else %}
                     <span class="badge badge-green">Yeterli</span>

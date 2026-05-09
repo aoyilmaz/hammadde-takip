@@ -8,6 +8,12 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
+// Navigasyon grubu (dropdown) açma/kapama
+function toggleNavGroup(btn) {
+    const group = btn.closest('.nav-group');
+    group.classList.toggle('active');
+}
+
 // Sayfa dışına tıklayınca sidebar kapat (mobil)
 document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('sidebar');
